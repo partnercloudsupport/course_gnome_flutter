@@ -1,24 +1,23 @@
 import 'package:flutter/material.dart';
-import 'dart:math';
+import 'package:course_gnome/model/Calendar.dart';
 
 class CalendarPage extends StatefulWidget {
   @override
   _CalendarPageState createState() => _CalendarPageState();
 }
 
-class _CalendarPageState extends State<CalendarPage> {
+class _CalendarPageState extends State<CalendarPage>
+    with SingleTickerProviderStateMixin {
   static const hourCount = 17;
   static const startHour = 7;
   static const dayCount = 7;
   var hourHeight = 100.0;
-  var dayWidth = 150.0;
+  var dayWidth = 125.0;
 
-  var classTimes = List<List<ClassTime>>.generate(7, (i) => List<ClassTime>());
-
-  final hourController = ScrollController();
-  final dayController = ScrollController();
-  final horizontalCalController = ScrollController();
-  final verticalCalController = ScrollController();
+  ScrollController hourController;
+  ScrollController dayController;
+  ScrollController horizontalCalController;
+  ScrollController verticalCalController;
 
   calHorizontallyScrolled() {
     dayController.jumpTo(horizontalCalController.offset);
@@ -28,6 +27,14 @@ class _CalendarPageState extends State<CalendarPage> {
     hourController.jumpTo(verticalCalController.offset);
   }
 
+  TabController _tabController;
+
+  // mock cals
+  List<Calendar> calendars = [
+    Calendar('My Calendar'),
+    Calendar('Extra Credit'),
+  ];
+
 //  scaleStart(ScaleStartDetails details) {}
 //  scaleUpdate(ScaleUpdateDetails details) {}
 //  scaleEnd(ScaleEndDetails details) {}
@@ -35,81 +42,102 @@ class _CalendarPageState extends State<CalendarPage> {
   @override
   void initState() {
     super.initState();
+    calendars[0].blocks[2].add(ClassBlock(
+          startTime: TimeOfDay(hour: 8, minute: 00),
+          endTime: TimeOfDay(hour: 9, minute: 15),
+          departmentInfo: 'AFST 1000',
+          id: '12122',
+          name: 'Science for Dweebs u feel me',
+          color: Colors.deepPurple,
+        ));
+    calendars[1].blocks[1].add(
+          ClassBlock(
+            startTime: TimeOfDay(hour: 9, minute: 45),
+            endTime: TimeOfDay(hour: 10, minute: 35),
+            departmentInfo: 'CSCI 2010',
+            id: '92281',
+            name: 'Science for Nerds!',
+            color: Colors.deepOrange,
+          ),
+        );
+    _tabController = TabController(length: calendars.length, vsync: this, initialIndex: 1);
+    hourController = ScrollController();
+    verticalCalController = ScrollController();
+    dayController = ScrollController(initialScrollOffset: dayWidth);
+    horizontalCalController = ScrollController(initialScrollOffset: dayWidth);
     horizontalCalController.addListener(calHorizontallyScrolled);
     verticalCalController.addListener(calVerticallyScrolled);
+  }
 
-    // test class time
-    classTimes[1].addAll([
-      ClassTime(
-        startTime: TimeOfDay(hour: 8, minute: 00),
-        endTime: TimeOfDay(hour: 9, minute: 15),
-        departmentInfo: 'AFST 1000',
-        id: '12122',
-        name: 'Science for Dweebs u feel me',
-        color: Colors.deepPurple,
-      ),
-      ClassTime(
-        startTime: TimeOfDay(hour: 9, minute: 45),
-        endTime: TimeOfDay(hour: 10, minute: 35),
-        departmentInfo: 'CSCI 2010',
-        id: '92281',
-        name: 'Science for Nerds! And dweebs! haha!',
-        color: Colors.deepOrange,
-      ),
-    ]);
+  @override
+  void dispose() {
+    _tabController.dispose();
+    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        elevation: 0,
-        title: Text('Calendar'),
-        leading: IconButton(
-          icon: Icon(Icons.arrow_back_ios),
-          onPressed: () {
-            Navigator.pop(context);
-          },
-        ),
-        actions: [
-          IconButton(
-              icon: Icon(Icons.format_list_bulleted), onPressed: () => {}),
-        ],
-      ),
-      body: Column(
-        children: <Widget>[
-          DayList(dayCount, dayWidth, dayController),
-          Expanded(
-            child: SafeArea(
-              child: Row(
-                children: <Widget>[
-                  HourList(hourCount, startHour, hourHeight, hourController),
-                  Calendar(
-                      dayCount,
-                      hourCount,
-                      startHour,
-                      dayWidth,
-                      hourHeight,
-                      horizontalCalController,
-                      verticalCalController,
-                      classTimes),
-                ],
-              ),
+        appBar: AppBar(
+            elevation: 0,
+            title: Text('Calendar'),
+            leading: IconButton(
+              icon: Icon(Icons.arrow_back_ios),
+              onPressed: () {
+                Navigator.pop(context);
+              },
             ),
+            actions: [
+              IconButton(
+                  icon: Icon(Icons.playlist_add), onPressed: () => {}),
+            ],
+            bottom: TabBar(
+                controller: _tabController,
+                isScrollable: true,
+                indicatorColor: Colors.white,
+                tabs: List.generate(
+                    calendars.length, (i) => Tab(text: calendars[i].name)))),
+        body: TabBarView(
+          physics: NeverScrollableScrollPhysics(),
+          controller: _tabController,
+          children: List.generate(
+            calendars.length,
+            (i) => Column(
+                  children: <Widget>[
+                    DayList(dayCount, dayWidth, dayController),
+                    Expanded(
+                      child: SafeArea(
+                        child: Row(
+                          children: <Widget>[
+                            HourList(hourCount, startHour, hourHeight,
+                                hourController),
+                            CalendarView(
+                                dayCount,
+                                hourCount,
+                                startHour,
+                                dayWidth,
+                                hourHeight,
+                                horizontalCalController,
+                                verticalCalController,
+                                calendars[i].blocks),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
           ),
-        ],
-      ),
-    );
+        ));
   }
 }
 
-class Calendar extends StatelessWidget {
+class CalendarView extends StatelessWidget {
   static const BorderSide border = BorderSide(color: Colors.grey, width: 0.25);
   final int dayCount, hourCount, startHour;
   final double dayWidth, hourHeight;
   final ScrollController horizontalCalController, verticalCalController;
-  final List<List<ClassTime>> classTimes;
-  Calendar(
+  final List<List<ClassBlock>> classTimes;
+  CalendarView(
       this.dayCount,
       this.hourCount,
       this.startHour,
@@ -164,7 +192,7 @@ class Calendar extends StatelessWidget {
                               ? Stack(
                                   children: List.generate(
                                     classTimes[i].length,
-                                    (k) => ClassBlock(startHour, dayWidth,
+                                    (k) => ClassBlockWidget(startHour, dayWidth,
                                         hourHeight, classTimes[i][k]),
                                   ),
                                 )
@@ -252,13 +280,14 @@ class HourList extends StatelessWidget {
   }
 }
 
-class ClassBlock extends StatelessWidget {
+class ClassBlockWidget extends StatelessWidget {
   static const borderRadius = 3.0;
   static const lighteningFactor = 80;
   final int startHour;
   final double dayWidth, hourHeight;
-  final ClassTime classTime;
-  ClassBlock(this.startHour, this.dayWidth, this.hourHeight, this.classTime);
+  final ClassBlock classTime;
+  ClassBlockWidget(
+      this.startHour, this.dayWidth, this.hourHeight, this.classTime);
 
   double calculateOffset() {
     return classTime.startTime.hour * hourHeight +
@@ -282,17 +311,11 @@ class ClassBlock extends StatelessWidget {
     }
     return classTime.startTime.hour.toString() + ':' + minuteString;
   }
-  
+
   Color lightenColor(Color color) {
-    print(color.blue);
-    print(color.green);
-    print(color.red);
-    print(color.blue + lighteningFactor);
-    print(color.green + lighteningFactor);
-    print(color.red + lighteningFactor);
-    final blue = (color.blue+lighteningFactor).clamp(0, 255);
-    final green = (color.green+lighteningFactor).clamp(0, 255);
-    final red = (color.red+lighteningFactor).clamp(0, 255);
+    final blue = (color.blue + lighteningFactor).clamp(0, 255);
+    final green = (color.green + lighteningFactor).clamp(0, 255);
+    final red = (color.red + lighteningFactor).clamp(0, 255);
     return color.withBlue(blue).withGreen(green).withRed(red).withOpacity(0.3);
   }
 
@@ -300,7 +323,7 @@ class ClassBlock extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-      borderRadius: BorderRadius.all(Radius.circular(borderRadius)),
+        borderRadius: BorderRadius.all(Radius.circular(borderRadius)),
         color: lightenColor(classTime.color),
       ),
       margin: EdgeInsets.only(top: calculateOffset()),
@@ -310,10 +333,11 @@ class ClassBlock extends StatelessWidget {
         children: <Widget>[
           Container(
             width: 4,
-            decoration:BoxDecoration(
+            decoration: BoxDecoration(
                 color: classTime.color,
-                borderRadius: BorderRadius.only(topLeft: Radius.circular(borderRadius),bottomLeft: Radius.circular(borderRadius))
-            ),
+                borderRadius: BorderRadius.only(
+                    topLeft: Radius.circular(borderRadius),
+                    bottomLeft: Radius.circular(borderRadius))),
           ),
           Expanded(
             child: Padding(
@@ -321,10 +345,20 @@ class ClassBlock extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(classTime.departmentInfo, style: TextStyle(color: classTime.color),),
+                  Text(
+                    classTime.departmentInfo,
+                    style: TextStyle(color: classTime.color),
+                  ),
 //                  Text(formatTime(), style: TextStyle(color: classTime.color),),
-                  Text(classTime.id, style: TextStyle(color: classTime.color, fontWeight: FontWeight.bold),),
-                  Text(classTime.name, style: TextStyle(color: classTime.color),),
+                  Text(
+                    classTime.id,
+                    style: TextStyle(
+                        color: classTime.color, fontWeight: FontWeight.bold),
+                  ),
+                  Text(
+                    classTime.name,
+                    style: TextStyle(color: classTime.color),
+                  ),
                 ],
               ),
             ),
@@ -334,22 +368,3 @@ class ClassBlock extends StatelessWidget {
     );
   }
 }
-
-class ClassTime {
-  TimeOfDay startTime, endTime;
-  String departmentInfo, id, name;
-  Color color;
-  ClassTime(
-      {this.startTime,
-      this.endTime,
-      this.departmentInfo,
-      this.id,
-      this.name,
-      this.color});
-
-  int offset() {
-    return startTime.hour * 2;
-  }
-}
-
-enum Weekday { Sunday, Monday, Tuesday, Wednesday, Thursday, Friday, Saturday }
