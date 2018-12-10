@@ -24,12 +24,11 @@ class _SearchPageState extends State<SearchPage> {
   var _searching = false;
 
   // cal
+  var _calendars = Calendars();
 
-  var _calendars = List<Calendar>();
-  var _currentCalendarIndex = 0;
   _toggleOffering(Course course, Offering offering, Color color) {
     setState(() {
-      _calendars[_currentCalendarIndex].toggleOffering(course, offering, color);
+      _calendars.list[_calendars.currentCalendarIndex].toggleOffering(course, offering, color);
     });
   }
   var _courseResults = List<Course>();
@@ -72,7 +71,7 @@ class _SearchPageState extends State<SearchPage> {
       context,
       MaterialPageRoute(
         builder: (context) => CalendarPage(
-          _calendars, _currentCalendarIndex
+          _calendars
         ),
       ),
     );
@@ -86,7 +85,8 @@ class _SearchPageState extends State<SearchPage> {
   void initState() {
     // TODO: implement initState
     super.initState();
-    _calendars.add(Calendar("My Calendar"));
+    _calendars=Calendars();
+    _calendars.addCalendar("My Calendar");
   }
 
   @override
@@ -95,6 +95,7 @@ class _SearchPageState extends State<SearchPage> {
       appBar: AppBar(
         elevation: 0,
         title: Text('Search'),
+        centerTitle: false,
         leading: IconButton(
           icon: Icon(Icons.person),
           onPressed: _goToProfile,
@@ -152,7 +153,7 @@ class _SearchPageState extends State<SearchPage> {
                 (BuildContext context, int i) {
                   return CourseCard(
                     offeringExpanded: _offeringExpanded,
-                    currentCalendar: _calendars[_currentCalendarIndex],
+                    currentCalendar: _calendars.list[_calendars.currentCalendarIndex],
                     toggleOffering: _toggleOffering,
                     expandedOffering: _expandedOffering,
                     course: _courseResults[i],

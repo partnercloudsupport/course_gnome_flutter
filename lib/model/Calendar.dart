@@ -1,15 +1,42 @@
 import 'package:flutter/material.dart';
 import 'dart:collection';
+import 'dart:math';
 
 import 'package:course_gnome/model/Course.dart';
 
+class Calendars {
+  List<Calendar> list;
+  int currentCalendarIndex;
+  Calendars() {
+    list = [];
+  }
+  addCalendar(String name) {
+    // get new id
+    int id;
+    while(true){
+      id = Random().nextInt(100);
+      if (list.indexWhere((cal)=>cal.id == id)==-1)
+        break;
+    }
+    final cal = Calendar(name, id);
+    list.add(cal);
+//    // behavior for now is we set this calendar to be the current one
+    currentCalendarIndex = list.length-1;
+  }
+  removeCalendar(Calendar calendar) {
+    list.remove(calendar);
+  }
+}
+
 class Calendar {
+  int id;
   String name;
   HashSet<String> ids;
   List<List<ClassBlock>> blocksByDay;
 
-  Calendar(name) {
+  Calendar(name, id) {
     this.name = name;
+    this.id = id;
     ids = HashSet<String>();
     blocksByDay = List.generate(7, (i) => List<ClassBlock>());
   }
