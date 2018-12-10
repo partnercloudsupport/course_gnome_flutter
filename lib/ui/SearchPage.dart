@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:course_gnome/ui/CalendarPage.dart';
+import 'package:course_gnome/ui/ProfilePage.dart';
 import 'package:course_gnome/model/Course.dart';
 import 'package:course_gnome/utilities/Utilities.dart';
 import 'package:flutter/services.dart';
@@ -13,9 +14,17 @@ class SearchPage extends StatefulWidget {
 class _SearchPageState extends State<SearchPage> {
   static const _borderRadius = 3.0;
   Offering _expandedOffering;
+  var _searched = false;
 
   // TODO
-  _goToProfile() {}
+  _goToProfile() {
+//    Navigator.replace(
+//      context,
+//      MaterialPageRoute(
+//        builder: (context) => ProfilePage(),
+//      ),
+//    );
+  }
 
   _goToCalendar() {
     Navigator.push(
@@ -34,10 +43,27 @@ class _SearchPageState extends State<SearchPage> {
   }
 
   // mock data
-  var classTimes = List<Course>();
+  var _courseResults = List<Course>();
+  var _selectedOfferings = Map<String, Offering>();
+
+  _toggleOfferingSelected(Offering offering) {
+    if (_selectedOfferings.containsKey(offering.crn)) {
+      setState(() {
+        _selectedOfferings.remove(offering.crn);
+      });
+    } else {
+      setState(() {
+        _selectedOfferings[offering.crn] = offering;
+      });
+    }
+  }
 
   _search(String text) async {
-    classTimes = await Networking.getCourses(text);
+    _searched = true;
+    final List<Course> results = await Networking.getCourses(text);
+    setState(() {
+      _courseResults = results;
+    });
   }
 
   @override
@@ -75,7 +101,7 @@ class _SearchPageState extends State<SearchPage> {
                     children: <Widget>[
                       Container(
                         child: TextField(
-                          onSubmitted: (text) => print(text),
+                          onSubmitted: (text) => _search(text),
                           decoration: InputDecoration(
                             border: InputBorder.none,
                             hintText: 'Search for anything',
@@ -97,17 +123,37 @@ class _SearchPageState extends State<SearchPage> {
               snap: true,
             ),
             SliverList(
-              delegate: SliverChildListDelegate(
-                List.generate(
-                  classTimes.length,
-                  (i) => CourseCard(
-                        offeringExpanded: _offeringExpanded,
-                        expandedOffering: _expandedOffering,
-                        course: classTimes[i],
-                        borderRadius: _borderRadius,
-                        color: CGColors.colorArray400[i%CGColors.colorArray400.length],
-                      ),
-                ),
+              delegate: SliverChildBuilderDelegate(
+                (BuildContext context, int i) {
+                  return CourseCard(
+                    toggleOfferingSelected: _toggleOfferingSelected,
+                    offeringExpanded: _offeringExpanded,
+                    selectedOfferings: _selectedOfferings,
+                    expandedOffering: _expandedOffering,
+                    course: _courseResults[i],
+                    borderRadius: _borderRadius,
+                    color: CGColors
+                        .colorArray400[i % CGColors.colorArray400.length],
+                  );
+                },
+                childCount: _courseResults.length,
+
+//                b
+//                _searched
+//                    ? _classTimes.length > 0
+//                        ? List.generate(
+//                            _classTimes.length,
+//                            (i) => CourseCard(
+//                                  offeringExpanded: _offeringExpanded,
+//                                  expandedOffering: _expandedOffering,
+//                                  course: _classTimes[i],
+//                                  borderRadius: _borderRadius,
+//                                  color: CGColors.colorArray400[
+//                                      i % CGColors.colorArray400.length],
+//                                ),
+//                          )
+//                        : [Container(child: Text('No results'),)]
+//                    : [Container()]
               ),
             ),
           ],
@@ -118,12 +164,20 @@ class _SearchPageState extends State<SearchPage> {
 }
 
 class CourseCard extends StatelessWidget {
-  final Function offeringExpanded;
+  final Function offeringExpanded, toggleOfferingSelected;
   final Offering expandedOffering;
+  final Map<String, Offering> selectedOfferings;
   final Course course;
   final double borderRadius;
   final Color color;
-  CourseCard({this.offeringExpanded, this.expandedOffering, this.course, this.borderRadius, this.color});
+  CourseCard(
+      {this.toggleOfferingSelected,
+        this.offeringExpanded,
+        this.selectedOfferings,
+      this.expandedOffering,
+      this.course,
+      this.borderRadius,
+      this.color});
   @override
   Widget build(BuildContext context) {
     return Card(
@@ -151,43 +205,43 @@ class CourseCard extends StatelessWidget {
                 Container(
                   padding: EdgeInsets.all(7),
                   child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: <Widget>[
-                            Text(
-                              course.departmentAcronym +
-                                  course.departmentNumber,
-                              style: Theme.of(context)
-                                  .textTheme
-                                  .subtitle
-                                  .copyWith(color: color),
-                            ),
-                            Text(
-                              course.credit == '0'
-                                  ? course.credit + ' credit'
-                                  : course.credit + ' credits',
-                              style: Theme.of(context)
-                                  .textTheme
-                                  .subtitle
-                                  .copyWith(color: color),
-                            ),
-                          ],
-                        ),
-                        Text(
-                          course.name,
-                          style: Theme.of(context).textTheme.title.copyWith(
-                              color: color, fontWeight: FontWeight.bold),
-                        ),
-                      ],
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: <Widget>[
+                          Text(
+                            course.departmentAcronym + course.departmentNumber,
+                            style: Theme.of(context)
+                                .textTheme
+                                .subtitle
+                                .copyWith(color: color),
+                          ),
+                          Text(
+                            course.credit == '0'
+                                ? course.credit + ' credit'
+                                : course.credit + ' credits',
+                            style: Theme.of(context)
+                                .textTheme
+                                .subtitle
+                                .copyWith(color: color),
+                          ),
+                        ],
+                      ),
+                      Text(
+                        course.name,
+                        style: Theme.of(context).textTheme.title.copyWith(
+                            color: color, fontWeight: FontWeight.bold),
+                      ),
+                    ],
                   ),
                 ),
                 // offerings
                 Column(
                   children: List.generate(
                     course.offerings.length,
-                    (j) => OfferingTile(offeringExpanded, expandedOffering, color, course.offerings[j]),
+                    (j) => OfferingTile(selectedOfferings, toggleOfferingSelected, offeringExpanded, expandedOffering,
+                        color, course.offerings[j]),
                   ),
                 ),
               ],
@@ -200,20 +254,20 @@ class CourseCard extends StatelessWidget {
 }
 
 class OfferingTile extends StatelessWidget {
-  final Function offeringExpanded;
+  final Map<String, Offering> selectedOfferings;
+  final Function offeringExpanded, toggleOfferingSelected;
   final Color color;
   final Offering expandedOffering, offering;
-  OfferingTile(this.offeringExpanded, this.expandedOffering, this.color, this.offering);
+  OfferingTile(this.selectedOfferings,
+      this.toggleOfferingSelected, this.offeringExpanded, this.expandedOffering, this.color, this.offering);
   @override
   Widget build(BuildContext context) {
     return Container(
+      color: selectedOfferings.containsKey(offering.crn) ? Colors.yellow : Colors.transparent,
       child: GestureDetector(
         onLongPress: () {
           HapticFeedback.selectionClick();
-          print('select');
-//          setState(() {
-//            color = lightRed;
-//          });
+          toggleOfferingSelected(offering);
         },
         child: ExpansionTile(
           onExpansionChanged: offeringExpanded(offering),
@@ -234,7 +288,7 @@ class OfferingTile extends StatelessWidget {
               Text(offering.crn, style: TextStyle(color: color)),
             ],
           ),
-          children: [ExtraInfoContainer(color)],
+          children: [ExtraInfoContainer(color, offering)],
         ),
       ),
     );
@@ -275,13 +329,18 @@ class ClassTimeRow extends StatelessWidget {
 
 class ExtraInfoContainer extends StatelessWidget {
   final Color color;
-  ExtraInfoContainer(this.color);
+  final Offering offering;
+  ExtraInfoContainer(this.color, this.offering);
   @override
   Widget build(BuildContext context) {
     return Container(
       padding: EdgeInsets.fromLTRB(15, 0, 15, 10),
       alignment: Alignment.centerLeft,
-      child: Text('d', style: TextStyle(color: color)),
+      child: Column(
+        children: <Widget>[
+          Text('Instructors: ' + offering.instructors, style: TextStyle(color: color)),
+        ],
+      ),
     );
   }
 }

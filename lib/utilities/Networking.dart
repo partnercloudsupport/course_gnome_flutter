@@ -13,6 +13,7 @@ class Networking {
         description: 'A nice class!',
         offerings: [
           Offering(
+            instructors: 'Bob Dole, Tim T',
             crn: '13919',
             sectionNumber: '10',
             status: 'Open',
@@ -28,6 +29,7 @@ class Networking {
             ],
           ),
           Offering(
+            instructors: 'Amanda Bines, Tim A',
             crn: '21812',
             sectionNumber: '12',
             status: 'Closed',
