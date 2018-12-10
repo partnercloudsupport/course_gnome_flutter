@@ -1,15 +1,34 @@
 import 'package:flutter/material.dart';
 import 'dart:collection';
 import 'dart:math';
+import 'dart:convert';
+
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:course_gnome/model/Course.dart';
 
 class Calendars {
   List<Calendar> list;
   int currentCalendarIndex;
+
   Calendars() {
     list = [];
+    // try to load saved calendars,
+    _loadCalendars();
   }
+
+  // return true if load succeeded
+  _loadCalendars() async {
+    final sp = await SharedPreferences.getInstance();
+    final jsonString = sp.getString("calendars");
+    if (json == null)
+      return;
+    final Calendars calendars = json.decode(jsonString);
+    this.list = calendars.list;
+    this.currentCalendarIndex = calendars.currentCalendarIndex;
+    return;
+  }
+
   addCalendar(String name) {
     // get new id
     int id;
@@ -18,13 +37,19 @@ class Calendars {
       if (list.indexWhere((cal)=>cal.id == id)==-1)
         break;
     }
-    final cal = Calendar(name, id);
+    final cal = Calendar(_calendarUpdated, name, id);
     list.add(cal);
 //    // behavior for now is we set this calendar to be the current one
     currentCalendarIndex = list.length-1;
   }
   removeCalendar(Calendar calendar) {
     list.remove(calendar);
+  }
+
+  // call on any update to calendar
+  _calendarUpdated() async {
+    final sp = await SharedPreferences.getInstance();
+    sp.setString("calendars", jsonEncode(this));
   }
 }
 
@@ -33,8 +58,10 @@ class Calendar {
   String name;
   HashSet<String> ids;
   List<List<ClassBlock>> blocksByDay;
+  VoidCallback calendarUpdated;
 
-  Calendar(name, id) {
+  Calendar(calendarUpdated, name, id) {
+    this.calendarUpdated = calendarUpdated;
     this.name = name;
     this.id = id;
     ids = HashSet<String>();
@@ -65,12 +92,14 @@ class Calendar {
             offset, height, departmentInfo, offering.id, course.name, color));
       }
     }
+    calendarUpdated();
   }
   removeOffering(String id) {
     ids.remove(id);
     blocksByDay.forEach((list) =>
       list.removeWhere((block)=>block.id == id)
     );
+    calendarUpdated();
   }
 
 }

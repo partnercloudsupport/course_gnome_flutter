@@ -1,12 +1,30 @@
 import 'package:flutter/material.dart';
 import 'dart:io';
 
-import 'package:course_gnome/model/Course.dart';
+import 'package:cloud_functions/cloud_functions.dart';
 
+import 'package:course_gnome/model/Course.dart';
 
 class Networking {
   static Future<List<Course>> getCourses(String text) async {
-//    sleep(Duration(seconds: 2));
+//    try {
+//      final dynamic resp = await CloudFunctions.instance.call(
+//        functionName: 'getCourses',
+//        parameters: <String, dynamic>{
+//          'name': text,
+//        },
+//      );
+//      print(resp);
+//      final coursesJson = resp['courses'];
+//    } on CloudFunctionsException catch (e) {
+//      print('caught firebase functions exception');
+//      print(e.code);
+//      print(e.message);
+//      print(e.details);
+//    } catch (e) {
+//      print('caught generic exception');
+//      print(e);
+//    }
     return List.generate(
       10,
           (i) => Course(
