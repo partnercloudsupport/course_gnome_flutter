@@ -1,9 +1,15 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+
+import 'package:url_launcher/url_launcher.dart';
+
 import 'package:course_gnome/ui/CalendarPage.dart';
 import 'package:course_gnome/ui/ProfilePage.dart';
+
 import 'package:course_gnome/model/Course.dart';
+import 'package:course_gnome/model/Calendar.dart';
+
 import 'package:course_gnome/utilities/Utilities.dart';
-import 'package:flutter/services.dart';
 import 'package:course_gnome/utilities/Networking.dart';
 
 class SearchPage extends StatefulWidget {
@@ -14,7 +20,42 @@ class SearchPage extends StatefulWidget {
 class _SearchPageState extends State<SearchPage> {
   static const _borderRadius = 3.0;
   Offering _expandedOffering;
-  var _searched = false;
+  final _searchTextFieldController = TextEditingController();
+  var _searching = false;
+
+  // cal
+
+  var _calendars = List<Calendar>();
+  var _currentCalendarIndex = 0;
+  _toggleOffering(Course course, Offering offering, Color color) {
+    setState(() {
+      _calendars[_currentCalendarIndex].toggleOffering(course, offering, color);
+    });
+  }
+  var _courseResults = List<Course>();
+  _offeringExpanded(Offering offering) {
+    _expandedOffering = offering;
+  }
+  _search(String text) async {
+    if (text.isEmpty) {
+      _clearSearch();
+      return;
+    }
+    setState(() {
+      _searching = true;
+    });
+    final List<Course> results = await Networking.getCourses(text);
+    setState(() {
+      _searching = false;
+      _courseResults = results;
+    });
+  }
+  _clearSearch() {
+    _searchTextFieldController.clear();
+    setState(() {
+      _courseResults.clear();
+    });
+  }
 
   // TODO
   _goToProfile() {
@@ -30,7 +71,9 @@ class _SearchPageState extends State<SearchPage> {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => CalendarPage(),
+        builder: (context) => CalendarPage(
+          _calendars, _currentCalendarIndex
+        ),
       ),
     );
   }
@@ -38,32 +81,12 @@ class _SearchPageState extends State<SearchPage> {
   // TODO
   _goToFilter() {}
 
-  _offeringExpanded(Offering offering) {
-    _expandedOffering = offering;
-  }
 
-  // mock data
-  var _courseResults = List<Course>();
-  var _selectedOfferings = Map<String, Offering>();
-
-  _toggleOfferingSelected(Offering offering) {
-    if (_selectedOfferings.containsKey(offering.crn)) {
-      setState(() {
-        _selectedOfferings.remove(offering.crn);
-      });
-    } else {
-      setState(() {
-        _selectedOfferings[offering.crn] = offering;
-      });
-    }
-  }
-
-  _search(String text) async {
-    _searched = true;
-    final List<Course> results = await Networking.getCourses(text);
-    setState(() {
-      _courseResults = results;
-    });
+  @override
+  void initState() {
+    // TODO: implement initState
+    super.initState();
+    _calendars.add(Calendar("My Calendar"));
   }
 
   @override
@@ -93,42 +116,44 @@ class _SearchPageState extends State<SearchPage> {
         child: CustomScrollView(
           slivers: <Widget>[
             SliverAppBar(
-              expandedHeight: 60,
-              flexibleSpace: FlexibleSpaceBar(
-                background: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 20.0),
-                  child: Column(
-                    children: <Widget>[
-                      Container(
-                        child: TextField(
-                          onSubmitted: (text) => _search(text),
-                          decoration: InputDecoration(
-                            border: InputBorder.none,
-                            hintText: 'Search for anything',
-                            prefixIcon: Icon(Icons.search),
-                          ),
-                          textCapitalization: TextCapitalization.sentences,
-                        ),
-                        decoration: BoxDecoration(
-                          borderRadius: const BorderRadius.all(
-                              const Radius.circular(_borderRadius)),
-                          color: Colors.white,
-                        ),
-                      ),
-                    ],
+              title: Container(
+                margin: EdgeInsets.only(bottom: 5),
+                child: TextField(
+                  controller: _searchTextFieldController,
+                  onSubmitted: (text) => _search(text),
+                  decoration: InputDecoration(
+                    border: InputBorder.none,
+                    hintText: 'Search for anything',
+                    prefixIcon: Icon(Icons.search),
+                    suffixIcon: _searchTextFieldController.text.isNotEmpty ? IconButton(
+                      icon: Icon(Icons.clear, color: Colors.grey,),
+                      onPressed: ()=>_clearSearch(),
+                    ) : null,
                   ),
+                  textCapitalization: TextCapitalization.sentences,
+                  textInputAction: TextInputAction.search,
+                ),
+                decoration: BoxDecoration(
+                  borderRadius: const BorderRadius.all(
+                      const Radius.circular(_borderRadius)),
+                  color: Colors.white,
                 ),
               ),
               floating: true,
               snap: true,
             ),
+            _searching ? SliverList(
+              delegate: SliverChildListDelegate(
+                [LinearProgressIndicator()]
+              ),
+            ) : SliverPadding(padding: EdgeInsets.all(0)),
             SliverList(
               delegate: SliverChildBuilderDelegate(
                 (BuildContext context, int i) {
                   return CourseCard(
-                    toggleOfferingSelected: _toggleOfferingSelected,
                     offeringExpanded: _offeringExpanded,
-                    selectedOfferings: _selectedOfferings,
+                    currentCalendar: _calendars[_currentCalendarIndex],
+                    toggleOffering: _toggleOffering,
                     expandedOffering: _expandedOffering,
                     course: _courseResults[i],
                     borderRadius: _borderRadius,
@@ -136,7 +161,10 @@ class _SearchPageState extends State<SearchPage> {
                         .colorArray400[i % CGColors.colorArray400.length],
                   );
                 },
+                addAutomaticKeepAlives: true,
                 childCount: _courseResults.length,
+
+
 
 //                b
 //                _searched
@@ -164,16 +192,17 @@ class _SearchPageState extends State<SearchPage> {
 }
 
 class CourseCard extends StatelessWidget {
-  final Function offeringExpanded, toggleOfferingSelected;
+  final Function offeringExpanded, toggleOffering;
   final Offering expandedOffering;
-  final Map<String, Offering> selectedOfferings;
+  final Calendar currentCalendar;
   final Course course;
   final double borderRadius;
   final Color color;
   CourseCard(
-      {this.toggleOfferingSelected,
-        this.offeringExpanded,
-        this.selectedOfferings,
+      {
+        this.toggleOffering,
+      this.offeringExpanded,
+      this.currentCalendar,
       this.expandedOffering,
       this.course,
       this.borderRadius,
@@ -240,8 +269,14 @@ class CourseCard extends StatelessWidget {
                 Column(
                   children: List.generate(
                     course.offerings.length,
-                    (j) => OfferingTile(selectedOfferings, toggleOfferingSelected, offeringExpanded, expandedOffering,
-                        color, course.offerings[j]),
+                    (j) => OfferingTile(
+                      course,
+                        currentCalendar,
+                        toggleOffering,
+                        offeringExpanded,
+                        expandedOffering,
+                        color,
+                        course.offerings[j]),
                   ),
                 ),
               ],
@@ -254,20 +289,23 @@ class CourseCard extends StatelessWidget {
 }
 
 class OfferingTile extends StatelessWidget {
-  final Map<String, Offering> selectedOfferings;
-  final Function offeringExpanded, toggleOfferingSelected;
+  final Course course;
+  final Function offeringExpanded, toggleOffering;
   final Color color;
   final Offering expandedOffering, offering;
-  OfferingTile(this.selectedOfferings,
-      this.toggleOfferingSelected, this.offeringExpanded, this.expandedOffering, this.color, this.offering);
+  final Calendar currentCalendar;
+  OfferingTile(this.course, this.currentCalendar, this.toggleOffering,
+      this.offeringExpanded, this.expandedOffering, this.color, this.offering);
   @override
   Widget build(BuildContext context) {
     return Container(
-      color: selectedOfferings.containsKey(offering.crn) ? Colors.yellow : Colors.transparent,
+      color: currentCalendar.ids.contains(offering.id)
+          ? Colors.yellow
+          : Colors.transparent,
       child: GestureDetector(
         onLongPress: () {
           HapticFeedback.selectionClick();
-          toggleOfferingSelected(offering);
+        toggleOffering(course, offering, color);
         },
         child: ExpansionTile(
           onExpansionChanged: offeringExpanded(offering),
@@ -277,15 +315,23 @@ class OfferingTile extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(offering.sectionNumber, style: TextStyle(color: color)),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: List.generate(
-                  offering.classTimes.length,
-                  (k) => ClassTimeRow(offering.classTimes[k], color),
+              Expanded(
+                  flex: 1,
+                  child: Text(offering.sectionNumber,
+                      style: TextStyle(color: color))),
+              Expanded(
+                flex: 7,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: List.generate(
+                    offering.classTimes.length,
+                    (k) => ClassTimeRow(offering.classTimes[k], color),
+                  ),
                 ),
               ),
-              Text(offering.crn, style: TextStyle(color: color)),
+              Expanded(
+                  flex: 3,
+                  child: Text(offering.id, style: TextStyle(color: color))),
             ],
           ),
           children: [ExtraInfoContainer(color, offering)],
@@ -311,16 +357,21 @@ class ClassTimeRow extends StatelessWidget {
                   width: 12,
                   height: 12,
                   decoration: BoxDecoration(
-                      color: classTime.days[i] ? color : Colors.transparent,
-                      border: Border.all(color: color, width: 1),
-                      borderRadius: BorderRadius.all(Radius.circular(2))),
+                    color: classTime.days[i] ? color : Colors.transparent,
+                    border: Border.all(color: color, width: 1),
+                    borderRadius: BorderRadius.all(
+                      Radius.circular(2),
+                    ),
+                  ),
                 ),
           ),
         ),
         Padding(
           padding: const EdgeInsets.only(left: 3.0),
-          child:
-              Text(classTime.rangeToString(), style: TextStyle(color: color)),
+          child: Text(
+            classTime.rangeToString(),
+            style: TextStyle(color: color),
+          ),
         )
       ],
     );
@@ -331,14 +382,32 @@ class ExtraInfoContainer extends StatelessWidget {
   final Color color;
   final Offering offering;
   ExtraInfoContainer(this.color, this.offering);
+
+  openCoursePage() async {
+    final url = offering.bulletinLink;
+    if (await canLaunch(url)) {
+    await launch(url);
+    } else {
+    throw 'Could not launch $url';
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Container(
       padding: EdgeInsets.fromLTRB(15, 0, 15, 10),
       alignment: Alignment.centerLeft,
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
-          Text('Instructors: ' + offering.instructors, style: TextStyle(color: color)),
+          Text('Instructors: ' + offering.instructors,
+              style: TextStyle(color: color)),
+          FlatButton.icon(
+            padding: EdgeInsets.all(0),
+            icon: Icon(Icons.open_in_browser, color: color,),
+            label: Text('See More',style: TextStyle(color: color),),
+            onPressed: ()=>openCoursePage(),
+          )
         ],
       ),
     );

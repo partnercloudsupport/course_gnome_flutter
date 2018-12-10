@@ -7,9 +7,9 @@ class Course {
 }
 
 class Offering {
-  String sectionNumber, status, crn, instructors;
+  String sectionNumber, status, id, instructors, bulletinLink;
   List<ClassTime> classTimes;
-  Offering({this.sectionNumber, this.status, this.crn, this.classTimes, this.instructors});
+  Offering({this.sectionNumber, this.status, this.id, this.classTimes, this.instructors, this.bulletinLink});
 }
 
 class ClassTime {
@@ -17,22 +17,17 @@ class ClassTime {
   String location;
   List<bool> days;
   ClassTime({this.startTime, this.endTime, this.location, this.days});
+  
+  String timeToString(TimeOfDay time) {
+    var minuteString = time.minute.toString();
+    if (time.minute < 10) {
+      minuteString += '0';
+    }
+    final hourString = ((time.hour-1) % 12 + 1).toString();
+    return hourString + ':' + minuteString;
+  }
 
-  String startTimeToString() {
-    var minuteString = startTime.minute.toString();
-    if (startTime.minute < 10) {
-      minuteString += '0';
-    }
-    return startTime.hour.toString() + ':' + minuteString;
-  }
-  String endTimeToString() {
-    var minuteString = endTime.minute.toString();
-    if (endTime.minute < 10) {
-      minuteString += '0';
-    }
-    return endTime.hour.toString() + ':' + minuteString;
-  }
   String rangeToString() {
-    return startTimeToString() + '-' + endTimeToString();
+    return timeToString(startTime) + '-' + timeToString(endTime);
   }
 }

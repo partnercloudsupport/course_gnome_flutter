@@ -1,7 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:course_gnome/model/Calendar.dart';
+import 'package:course_gnome/model/Course.dart';
 
 class CalendarPage extends StatefulWidget {
+  final List<Calendar> calendars;
+  final int currentCalendarIndex;
+  CalendarPage(this.calendars, this.currentCalendarIndex);
   @override
   _CalendarPageState createState() => _CalendarPageState();
 }
@@ -28,13 +32,7 @@ class _CalendarPageState extends State<CalendarPage>
   }
 
   TabController _tabController;
-
-  // mock cals
-  List<Calendar> calendars = [
-    Calendar('My Calendar'),
-    Calendar('Extra Credit'),
-  ];
-
+  
 //  scaleStart(ScaleStartDetails details) {}
 //  scaleUpdate(ScaleUpdateDetails details) {}
 //  scaleEnd(ScaleEndDetails details) {}
@@ -42,25 +40,8 @@ class _CalendarPageState extends State<CalendarPage>
   @override
   void initState() {
     super.initState();
-    calendars[0].blocks[2].add(ClassBlock(
-          startTime: TimeOfDay(hour: 8, minute: 00),
-          endTime: TimeOfDay(hour: 9, minute: 15),
-          departmentInfo: 'AFST 1000',
-          id: '12122',
-          name: 'Science for Dweebs u feel me',
-          color: Colors.deepPurple,
-        ));
-    calendars[1].blocks[1].add(
-          ClassBlock(
-            startTime: TimeOfDay(hour: 9, minute: 45),
-            endTime: TimeOfDay(hour: 10, minute: 35),
-            departmentInfo: 'CSCI 2010',
-            id: '92281',
-            name: 'Science for Nerds!',
-            color: Colors.deepOrange,
-          ),
-        );
-    _tabController = TabController(length: calendars.length, vsync: this, initialIndex: 1);
+    _tabController =
+        TabController(length: widget.calendars.length, vsync: this, initialIndex: widget.currentCalendarIndex);
     hourController = ScrollController();
     verticalCalController = ScrollController();
     dayController = ScrollController(initialScrollOffset: dayWidth);
@@ -79,29 +60,32 @@ class _CalendarPageState extends State<CalendarPage>
   Widget build(BuildContext context) {
     return Scaffold(
         appBar: AppBar(
-            elevation: 0,
-            title: Text('Calendar'),
-            leading: IconButton(
-              icon: Icon(Icons.arrow_back_ios),
-              onPressed: () {
-                Navigator.pop(context);
-              },
+          elevation: 0,
+          title: Text('Calendar'),
+          leading: IconButton(
+            icon: Icon(Icons.arrow_back_ios),
+            onPressed: () {
+              Navigator.pop(context);
+            },
+          ),
+          actions: [
+            IconButton(icon: Icon(Icons.playlist_add), onPressed: () => {}),
+          ],
+          bottom: TabBar(
+            controller: _tabController,
+            isScrollable: true,
+            indicatorColor: Colors.white,
+            tabs: List.generate(
+              widget.calendars.length,
+              (i) => Tab(text: widget.calendars[i].name),
             ),
-            actions: [
-              IconButton(
-                  icon: Icon(Icons.playlist_add), onPressed: () => {}),
-            ],
-            bottom: TabBar(
-                controller: _tabController,
-                isScrollable: true,
-                indicatorColor: Colors.white,
-                tabs: List.generate(
-                    calendars.length, (i) => Tab(text: calendars[i].name)))),
+          ),
+        ),
         body: TabBarView(
           physics: NeverScrollableScrollPhysics(),
           controller: _tabController,
           children: List.generate(
-            calendars.length,
+            widget.calendars.length,
             (i) => Column(
                   children: <Widget>[
                     DayList(dayCount, dayWidth, dayController),
@@ -119,7 +103,7 @@ class _CalendarPageState extends State<CalendarPage>
                                 hourHeight,
                                 horizontalCalController,
                                 verticalCalController,
-                                calendars[i].blocks),
+                                widget.calendars[i].blocksByDay),
                           ],
                         ),
                       ),
@@ -136,7 +120,7 @@ class CalendarView extends StatelessWidget {
   final int dayCount, hourCount, startHour;
   final double dayWidth, hourHeight;
   final ScrollController horizontalCalController, verticalCalController;
-  final List<List<ClassBlock>> classTimes;
+  final List<List<ClassBlock>> classBlocks;
   CalendarView(
       this.dayCount,
       this.hourCount,
@@ -145,7 +129,7 @@ class CalendarView extends StatelessWidget {
       this.hourHeight,
       this.horizontalCalController,
       this.verticalCalController,
-      this.classTimes);
+      this.classBlocks);
   @override
   Widget build(BuildContext context) {
     return Expanded(
@@ -188,12 +172,12 @@ class CalendarView extends StatelessWidget {
                                   ),
                             ),
                           ),
-                          classTimes[i].length != 0
+                          classBlocks[i].length != 0
                               ? Stack(
                                   children: List.generate(
-                                    classTimes[i].length,
+                                    classBlocks[i].length,
                                     (k) => ClassBlockWidget(startHour, dayWidth,
-                                        hourHeight, classTimes[i][k]),
+                                        hourHeight, classBlocks[i][k]),
                                   ),
                                 )
                               : Container(),
@@ -285,31 +269,12 @@ class ClassBlockWidget extends StatelessWidget {
   static const lighteningFactor = 80;
   final int startHour;
   final double dayWidth, hourHeight;
-  final ClassBlock classTime;
+  final ClassBlock classBlock;
   ClassBlockWidget(
-      this.startHour, this.dayWidth, this.hourHeight, this.classTime);
+      this.startHour, this.dayWidth, this.hourHeight, this.classBlock);
 
   double calculateOffset() {
-    return classTime.startTime.hour * hourHeight +
-        classTime.startTime.minute * hourHeight / 60 -
-        startHour * hourHeight;
-  }
-
-  double calculateHeight() {
-    double hour =
-        (classTime.endTime.hour - classTime.startTime.hour) * hourHeight;
-    double min = (classTime.endTime.minute - classTime.startTime.minute) *
-        (hourHeight / 60);
-    return hour + min;
-  }
-
-  String formatTime() {
-    var minute = classTime.startTime.minute;
-    var minuteString = minute.toString();
-    if (minute < 10) {
-      minuteString += '0';
-    }
-    return classTime.startTime.hour.toString() + ':' + minuteString;
+    return classBlock.offset * hourHeight - startHour * hourHeight;
   }
 
   Color lightenColor(Color color) {
@@ -324,17 +289,17 @@ class ClassBlockWidget extends StatelessWidget {
     return Container(
       decoration: BoxDecoration(
         borderRadius: BorderRadius.all(Radius.circular(borderRadius)),
-        color: lightenColor(classTime.color),
+        color: lightenColor(classBlock.color),
       ),
       margin: EdgeInsets.only(top: calculateOffset()),
-      height: calculateHeight(),
+      height: classBlock.height * hourHeight,
       width: dayWidth,
       child: Row(
         children: <Widget>[
           Container(
             width: 4,
             decoration: BoxDecoration(
-                color: classTime.color,
+                color: classBlock.color,
                 borderRadius: BorderRadius.only(
                     topLeft: Radius.circular(borderRadius),
                     bottomLeft: Radius.circular(borderRadius))),
@@ -346,18 +311,18 @@ class ClassBlockWidget extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    classTime.departmentInfo,
-                    style: TextStyle(color: classTime.color),
+                    classBlock.departmentInfo,
+                    style: TextStyle(color: classBlock.color),
                   ),
 //                  Text(formatTime(), style: TextStyle(color: classTime.color),),
                   Text(
-                    classTime.id,
+                    classBlock.id,
                     style: TextStyle(
-                        color: classTime.color, fontWeight: FontWeight.bold),
+                        color: classBlock.color, fontWeight: FontWeight.bold),
                   ),
                   Text(
-                    classTime.name,
-                    style: TextStyle(color: classTime.color),
+                    classBlock.name,
+                    style: TextStyle(color: classBlock.color),
                   ),
                 ],
               ),
