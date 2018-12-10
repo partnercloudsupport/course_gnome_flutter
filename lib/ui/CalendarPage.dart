@@ -3,25 +3,27 @@ import 'package:course_gnome/model/Calendar.dart';
 import 'package:course_gnome/model/Course.dart';
 
 class CalendarPage extends StatefulWidget {
-  final List<Calendar> calendars;
-  final int currentCalendarIndex;
-  CalendarPage(this.calendars, this.currentCalendarIndex);
+  final Calendars calendars;
+  CalendarPage(this.calendars);
   @override
   _CalendarPageState createState() => _CalendarPageState();
 }
 
 class _CalendarPageState extends State<CalendarPage>
-    with SingleTickerProviderStateMixin {
+    with TickerProviderStateMixin {
   static const hourCount = 17;
   static const startHour = 7;
   static const dayCount = 7;
   var hourHeight = 100.0;
   var dayWidth = 125.0;
 
+  TabController _tabController;
+  TextEditingController _calendarNameController;
   ScrollController hourController;
   ScrollController dayController;
   ScrollController horizontalCalController;
   ScrollController verticalCalController;
+
 
   calHorizontallyScrolled() {
     dayController.jumpTo(horizontalCalController.offset);
@@ -31,17 +33,166 @@ class _CalendarPageState extends State<CalendarPage>
     hourController.jumpTo(verticalCalController.offset);
   }
 
-  TabController _tabController;
-  
 //  scaleStart(ScaleStartDetails details) {}
 //  scaleUpdate(ScaleUpdateDetails details) {}
 //  scaleEnd(ScaleEndDetails details) {}
 
+  _tabChanged() {
+    widget.calendars.currentCalendarIndex = _tabController.index;
+  }
+  
+  _addCalendar() {
+    final name = _calendarNameController.text;
+    if (name.isEmpty)
+      return;
+    setState(() {
+      widget.calendars.addCalendar(name);
+      _tabController = TabController(
+          length: widget.calendars.list.length,
+          vsync: this
+      );
+    });
+    Navigator.pop(context);
+    _tabController.animateTo(widget.calendars.list.length-1);
+    _calendarNameController.clear();
+  }
+
+  _editCalendar() {
+    widget.calendars.list[widget.calendars.currentCalendarIndex].name =_calendarNameController.text;
+    Navigator.pop(context);
+  }
+  
+  _deleteCalendar() {
+    setState(() {
+      widget.calendars.removeCalendar(widget.calendars.list[widget.calendars.currentCalendarIndex]);
+      _tabController = TabController(
+          length: widget.calendars.list.length,
+          vsync: this
+      );
+    });
+    if (widget.calendars.list.length == widget.calendars.currentCalendarIndex) {
+
+    }
+    Navigator.pop(context);
+  }
+  
+  _showAddCalendarDialog() {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return SimpleDialog(
+          title: Text('Add Calendar'),
+          children: <Widget>[
+            Container(
+              padding: EdgeInsets.symmetric(horizontal: 20),
+              child: TextField(
+                autofocus: true,
+                controller: _calendarNameController,
+                textCapitalization: TextCapitalization.words,
+                onSubmitted: (text)=>_addCalendar(),
+                maxLength: 20,
+                maxLengthEnforced: true,
+                style: Theme.of(context).textTheme.headline
+              ),
+            ),
+            ButtonBar(
+              alignment: MainAxisAlignment.center,
+              children: <Widget>[
+                RaisedButton(
+                  child: Text('Add'),
+                  onPressed: ()=>_addCalendar(),
+                ),
+                FlatButton(
+                  child: Text('Cancel'),
+                  onPressed: ()=>Navigator.pop(context),
+                )
+              ],
+            )
+          ],
+        );
+      }
+    );
+  }
+
+  _showEditCalendarDialog(){
+    _calendarNameController.text = widget.calendars.list[widget.calendars.currentCalendarIndex].name;
+    showDialog(
+        context: context,
+        builder: (BuildContext context) {
+          return SimpleDialog(
+            title: Text('Edit Calendar'),
+            children: <Widget>[
+              Container(
+                padding: EdgeInsets.symmetric(horizontal: 20),
+                child: TextField(
+                    autofocus: true,
+                    controller: _calendarNameController,
+                    textCapitalization: TextCapitalization.words,
+                    onSubmitted: (text)=>_editCalendar(),
+                    maxLength: 20,
+                    maxLengthEnforced: true,
+                    style: Theme.of(context).textTheme.headline
+                ),
+              ),
+              ButtonBar(
+                alignment: MainAxisAlignment.center,
+                children: <Widget>[
+                  RaisedButton(
+                    child: Text('Save'),
+                    onPressed: ()=>_editCalendar(),
+                  ),
+                  FlatButton(
+                    child: Text('Cancel'),
+                    onPressed: ()=>Navigator.pop(context),
+                  )
+                ],
+              )
+            ],
+          );
+        }
+    );
+  }
+
+  _showDeleteCalendarDialog() {
+    showDialog(
+        context: context,
+        builder: (BuildContext context) {
+          return SimpleDialog(
+            title: Text('Delete Calendar'),
+            children: <Widget>[
+              Container(
+                padding: EdgeInsets.symmetric(horizontal: 20),
+                child: Text('Delete calendar ' + widget.calendars.list[widget.calendars.currentCalendarIndex].name + '?')
+              ),
+              ButtonBar(
+                alignment: MainAxisAlignment.center,
+                children: <Widget>[
+                  RaisedButton(
+                    child: Text('Delete'),
+                    onPressed: ()=>_deleteCalendar(),
+                  ),
+                  FlatButton(
+                    child: Text('Cancel'),
+                    onPressed: ()=>Navigator.pop(context),
+                  )
+                ],
+              )
+            ],
+          );
+        }
+    );
+  }
+
   @override
   void initState() {
     super.initState();
-    _tabController =
-        TabController(length: widget.calendars.length, vsync: this, initialIndex: widget.currentCalendarIndex);
+    _calendarNameController = TextEditingController();
+    _tabController = TabController(
+        length: widget.calendars.list.length,
+        vsync: this,
+        initialIndex: widget.calendars.currentCalendarIndex,
+    );
+    _tabController.addListener(_tabChanged);
     hourController = ScrollController();
     verticalCalController = ScrollController();
     dayController = ScrollController(initialScrollOffset: dayWidth);
@@ -53,65 +204,73 @@ class _CalendarPageState extends State<CalendarPage>
   @override
   void dispose() {
     _tabController.dispose();
+    _calendarNameController.dispose();
+    hourController.dispose();
+    dayController.dispose();
+    horizontalCalController.dispose();
+    verticalCalController.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-        appBar: AppBar(
-          elevation: 0,
-          title: Text('Calendar'),
-          leading: IconButton(
-            icon: Icon(Icons.arrow_back_ios),
-            onPressed: () {
-              Navigator.pop(context);
-            },
-          ),
-          actions: [
-            IconButton(icon: Icon(Icons.playlist_add), onPressed: () => {}),
-          ],
-          bottom: TabBar(
-            controller: _tabController,
-            isScrollable: true,
-            indicatorColor: Colors.white,
-            tabs: List.generate(
-              widget.calendars.length,
-              (i) => Tab(text: widget.calendars[i].name),
-            ),
+      appBar: AppBar(
+        elevation: 0,
+        title: Text('Calendar'),
+        leading: IconButton(
+          icon: Icon(Icons.arrow_back_ios),
+          onPressed: () {
+            Navigator.pop(context);
+          },
+        ),
+        actions: [
+          IconButton(icon: Icon(Icons.playlist_add), onPressed: () => _showAddCalendarDialog()),
+          IconButton(icon: Icon(Icons.edit), onPressed: () => _showEditCalendarDialog()),
+          widget.calendars.list.length > 1 ? IconButton(icon: Icon(Icons.remove_circle_outline), onPressed: () => _showDeleteCalendarDialog()) : Container(),
+        ],
+        bottom: TabBar(
+          controller: _tabController,
+          isScrollable: true,
+          indicatorColor: Colors.white,
+          tabs: List.generate(
+            widget.calendars.list.length,
+            (i) => Tab(text: widget.calendars.list[i].name),
           ),
         ),
-        body: TabBarView(
-          physics: NeverScrollableScrollPhysics(),
-          controller: _tabController,
-          children: List.generate(
-            widget.calendars.length,
-            (i) => Column(
-                  children: <Widget>[
-                    DayList(dayCount, dayWidth, dayController),
-                    Expanded(
-                      child: SafeArea(
-                        child: Row(
-                          children: <Widget>[
-                            HourList(hourCount, startHour, hourHeight,
-                                hourController),
-                            CalendarView(
-                                dayCount,
-                                hourCount,
-                                startHour,
-                                dayWidth,
-                                hourHeight,
-                                horizontalCalController,
-                                verticalCalController,
-                                widget.calendars[i].blocksByDay),
-                          ],
-                        ),
+      ),
+      body: TabBarView(
+        physics: NeverScrollableScrollPhysics(),
+        controller: _tabController,
+        children: List.generate(
+          widget.calendars.list.length,
+          (i) => Column(
+                children: <Widget>[
+                  DayList(dayCount, dayWidth, dayController),
+                  Expanded(
+                    child: SafeArea(
+                      child: Row(
+                        children: <Widget>[
+                          HourList(
+                              hourCount, startHour, hourHeight, hourController),
+                          CalendarView(
+                              dayCount,
+                              hourCount,
+                              startHour,
+                              dayWidth,
+                              hourHeight,
+                              horizontalCalController,
+                              verticalCalController,
+                              widget.calendars.list[i].blocksByDay),
+                        ],
                       ),
                     ),
-                  ],
-                ),
-          ),
-        ));
+                  ),
+                ],
+              ),
+        ),
+      ),
+    );
   }
 }
 
@@ -151,25 +310,27 @@ class CalendarView extends StatelessWidget {
                   dayCount,
                   (i) => Stack(
                         children: <Widget>[
-                          Column(
-                            children: List.generate(
-                              hourCount,
-                              (j) => Container(
-                                    decoration: BoxDecoration(
-                                      border: i == dayCount - 1
-                                          ? const Border(
-                                              top: border,
-                                              left: border,
-                                              right: border,
-                                            )
-                                          : const Border(
-                                              top: border,
-                                              left: border,
-                                            ),
+                          Container(
+                            child: Column(
+                              children: List.generate(
+                                hourCount,
+                                (j) => Container(
+                                      decoration: BoxDecoration(
+                                        border: i == dayCount - 1
+                                            ? const Border(
+                                                top: border,
+                                                left: border,
+                                                right: border,
+                                              )
+                                            : const Border(
+                                                top: border,
+                                                left: border,
+                                              ),
+                                      ),
+                                      height: hourHeight,
+                                      width: dayWidth,
                                     ),
-                                    height: hourHeight,
-                                    width: dayWidth,
-                                  ),
+                              ),
                             ),
                           ),
                           classBlocks[i].length != 0
