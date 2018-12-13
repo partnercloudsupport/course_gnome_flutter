@@ -193,7 +193,10 @@ class _CalendarPageState extends State<CalendarPage>
     );
   }
 
-  _onLongPress() {
+  _removeOffering(String id) {
+    setState(() {
+      widget.calendars.currentCalendar().removeOffering(id);
+    });
   }
 
   @override
@@ -248,8 +251,8 @@ class _CalendarPageState extends State<CalendarPage>
               onPressed: () => _showEditCalendarDialog()),
           widget.calendars.list.length > 1
               ? IconButton(
-              icon: Icon(Icons.remove_circle_outline),
-              onPressed: () => _showDeleteCalendarDialog())
+                  icon: Icon(Icons.remove_circle_outline),
+                  onPressed: () => _showDeleteCalendarDialog())
               : Container(),
         ],
         bottom: TabBar(
@@ -258,7 +261,7 @@ class _CalendarPageState extends State<CalendarPage>
           indicatorColor: Colors.white,
           tabs: List.generate(
             widget.calendars.list.length,
-                (i) => Tab(text: widget.calendars.list[i].name),
+            (i) => Tab(text: widget.calendars.list[i].name),
           ),
         ),
       ),
@@ -267,44 +270,43 @@ class _CalendarPageState extends State<CalendarPage>
         controller: _tabController,
         children: List.generate(
           widget.calendars.list.length,
-              (i) => Column(
-            children: <Widget>[
-              DayList(dayCount, dayWidth, dayController),
-              Expanded(
-                child: SafeArea(
-                  child: Row(
-                    children: <Widget>[
-                      HourList(hourCount, startHour, hourHeight,
-                          hourController),
-                      CalendarView(
-                          dayCount,
-                          hourCount,
-                          startHour,
-                          dayWidth,
-                          hourHeight,
-                          horizontalCalController,
-                          verticalCalController,
-                          widget.calendars.list[i].blocksByDay,
-                          _onLongPress),
-                    ],
+          (i) => Column(
+                children: <Widget>[
+                  DayList(dayCount, dayWidth, dayController),
+                  Expanded(
+                    child: SafeArea(
+                      child: Row(
+                        children: <Widget>[
+                          HourList(
+                              hourCount, startHour, hourHeight, hourController),
+                          CalendarView(
+                              dayCount,
+                              hourCount,
+                              startHour,
+                              dayWidth,
+                              hourHeight,
+                              horizontalCalController,
+                              verticalCalController,
+                              widget.calendars.list[i],
+                              _removeOffering),
+                        ],
+                      ),
+                    ),
                   ),
-                ),
+                ],
               ),
-            ],
-          ),
         ),
       ),
     );
   }
 }
 
-class CalendarView extends StatelessWidget {
-  static const BorderSide border = BorderSide(color: Colors.grey, width: 0.25);
+class CalendarView extends StatefulWidget {
   final int dayCount, hourCount, startHour;
   final double dayWidth, hourHeight;
   final ScrollController horizontalCalController, verticalCalController;
-  final List<List<ClassBlock>> classBlocks;
-  final Function onLongPress;
+  final Calendar calendar;
+  final Function removeOffering;
   CalendarView(
       this.dayCount,
       this.hourCount,
@@ -313,83 +315,149 @@ class CalendarView extends StatelessWidget {
       this.hourHeight,
       this.horizontalCalController,
       this.verticalCalController,
-      this.classBlocks,
-      this.onLongPress);
+      this.calendar,
+      this.removeOffering);
+  @override
+  _CalendarViewState createState() => _CalendarViewState();
+}
+
+class _CalendarViewState extends State<CalendarView> {
+  static const BorderSide border = BorderSide(color: Colors.grey, width: 0.25);
+  bool _dragging = false;
   @override
   Widget build(BuildContext context) {
     return Expanded(
       child: Padding(
         padding: const EdgeInsets.only(top: 8.0),
-        child: SingleChildScrollView(
-          controller: verticalCalController,
-          scrollDirection: Axis.vertical,
-          child: GestureDetector(
+        child: Stack(
+          alignment: Alignment.center,
+          children: <Widget>[
+            SingleChildScrollView(
+              controller: widget.verticalCalController,
+              scrollDirection: Axis.vertical,
+              child: GestureDetector(
 //            onScaleStart: (details) => scaleStart(details),
 //            onScaleUpdate: (details) => scaleUpdate(details),
 //            onScaleEnd: (details) => scaleEnd(details),
-            child: SizedBox(
-              height: hourHeight * hourCount,
-              child: ListView(
-                scrollDirection: Axis.horizontal,
-                controller: horizontalCalController,
-                children: List.generate(
-                  dayCount,
-                  (i) => Stack(
-                        children: <Widget>[
-                          Container(
-                            child: Column(
-                              children: List.generate(
-                                hourCount,
-                                (j) => Container(
-                                      decoration: BoxDecoration(
-                                        border: i == dayCount - 1
-                                            ? const Border(
-                                                top: border,
-                                                left: border,
-                                                right: border,
-                                              )
-                                            : const Border(
-                                                top: border,
-                                                left: border,
-                                              ),
-                                      ),
-                                      height: hourHeight,
-                                      width: dayWidth,
-                                    ),
-                              ),
-                            ),
-                          ),
-                          classBlocks[i].length != 0
-                              ? Stack(
+                child: SizedBox(
+                  height: widget.hourHeight * widget.hourCount,
+                  child: ListView(
+                    scrollDirection: Axis.horizontal,
+                    controller: widget.horizontalCalController,
+                    children: List.generate(
+                      widget.dayCount,
+                      (i) => Stack(
+                            children: <Widget>[
+                              Container(
+                                child: Column(
                                   children: List.generate(
-                                    classBlocks[i].length,
-                                    (k) => Positioned(
-                                          child: LongPressDraggable(
-                                            childWhenDragging: Container(),
-                                            maxSimultaneousDrags: 1,
-                                            child: ClassBlockWidget(
-                                                startHour,
-                                                dayWidth,
-                                                hourHeight,
-                                                classBlocks[i][k],
-                                                onLongPress),
-                                            feedback: ClassBlockWidget(
-                                                startHour,
-                                                dayWidth,
-                                                hourHeight,
-                                                classBlocks[i][k],
-                                                onLongPress),
+                                    widget.hourCount,
+                                    (j) => Container(
+                                          decoration: BoxDecoration(
+                                            border: i == widget.dayCount - 1
+                                                ? const Border(
+                                                    top: border,
+                                                    left: border,
+                                                    right: border,
+                                                  )
+                                                : const Border(
+                                                    top: border,
+                                                    left: border,
+                                                  ),
                                           ),
+                                          height: widget.hourHeight,
+                                          width: widget.dayWidth,
                                         ),
                                   ),
-                                )
-                              : Container(),
-                        ],
-                      ),
+                                ),
+                              ),
+                              widget.calendar.blocksByDay[i].length != 0
+                                  ? Stack(
+                                      children: List.generate(
+                                        widget.calendar.blocksByDay[i].length,
+                                        (k) => Positioned(
+                                              child: LongPressDraggable(
+                                                data: 2,
+                                                childWhenDragging: Container(),
+                                                maxSimultaneousDrags: 1,
+                                                child: ClassBlockWidget(
+                                                  false,
+                                                  widget.startHour,
+                                                  widget.dayWidth,
+                                                  widget.hourHeight,
+                                                  widget.calendar.blocksByDay[i]
+                                                      [k],
+                                                ),
+                                                feedback: ClassBlockWidget(
+                                                  true,
+                                                  widget.startHour,
+                                                  widget.dayWidth,
+                                                  widget.hourHeight,
+                                                  widget.calendar.blocksByDay[i]
+                                                      [k],
+                                                ),
+                                                onDragStarted: () {
+                                                  setState(() {
+                                                    _dragging = true;
+                                                  });
+                                                },
+                                                onDragEnd: (details) {
+                                                  setState(() {
+                                                    _dragging = false;
+                                                  });
+                                                },
+                                                onDraggableCanceled:
+                                                    (velocity, offset) {},
+                                                onDragCompleted: () {
+                                                  widget.removeOffering(widget
+                                                      .calendar
+                                                      .blocksByDay[i][k]
+                                                      .id);
+                                                },
+                                              ),
+                                            ),
+                                      ),
+                                    )
+                                  : Container(),
+                            ],
+                          ),
+                    ),
+                  ),
                 ),
               ),
             ),
-          ),
+            _dragging
+                ? Positioned(
+                    bottom: 30,
+                    child: SafeArea(
+                      child: DragTarget(
+                        onAccept: (int color) {
+                          print(color);
+                        },
+                        onWillAccept: (ni) {
+                          HapticFeedback.mediumImpact();
+                          return true;
+                        },
+                        builder: (
+                          BuildContext context,
+                          List<dynamic> accepted,
+                          List<dynamic> rejected,
+                        ) {
+                          return Container(
+                            width: 100.0,
+                            height: 100.0,
+                            child: Icon(
+                                accepted.length > 0
+                                    ? Icons.delete_outline
+                                    : Icons.delete,
+                                size: accepted.length > 0 ? 50 : 40),
+                          );
+                        },
+                      ),
+                    ),
+                  )
+                : Positioned(child: Container()),
+          ],
         ),
       ),
     );
@@ -468,13 +536,12 @@ class HourList extends StatelessWidget {
 }
 
 class ClassBlockWidget extends StatefulWidget {
-  final GlobalKey _key = GlobalKey();
+  final bool hover;
   final int startHour;
   final double dayWidth, hourHeight;
   final ClassBlock classBlock;
-  final Function onLongPress;
-  ClassBlockWidget(this.startHour, this.dayWidth, this.hourHeight,
-      this.classBlock, this.onLongPress);
+  ClassBlockWidget(this.hover, this.startHour, this.dayWidth, this.hourHeight,
+      this.classBlock);
   @override
   _ClassBlockWidgetState createState() => _ClassBlockWidgetState();
 }
@@ -483,80 +550,71 @@ class _ClassBlockWidgetState extends State<ClassBlockWidget> {
   static const heightBreakpoint = 1;
   static const borderRadius = 3.0;
   static const lighteningFactor = 80;
-  bool isBeingHeld = false;
+  static const hoverSizeIncrease = 20;
 
   double calculateOffset() {
     return widget.classBlock.offset * widget.hourHeight -
-        widget.startHour * widget.hourHeight;
-  }
-
-  _onLongPress(key) {
-//    isBeingHeld = true;
-//    widget.onLongPress(widget.classBlock, key);
-  }
-
-  _tapUp() {
-    isBeingHeld = false;
+        widget.startHour * widget.hourHeight -
+        (widget.hover ? hoverSizeIncrease / 2 : 0);
   }
 
   @override
   Widget build(BuildContext context) {
     final height = widget.classBlock.height * widget.hourHeight;
-    return !isBeingHeld
-        ? Container(
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.all(Radius.circular(borderRadius)),
-              color: widget.classBlock.color.light,
-            ),
-            margin: EdgeInsets.only(top: calculateOffset()),
-            height: height,
-            width: widget.dayWidth,
-            child: FlatButton(
-              key: widget._key,
-              padding: EdgeInsets.all(0),
-              onPressed: () {},
-              child: Row(
-                children: <Widget>[
-                  Container(
-                    width: 4,
-                    decoration: BoxDecoration(
-                        color: widget.classBlock.color.med,
-                        borderRadius: BorderRadius.only(
-                            topLeft: Radius.circular(borderRadius),
-                            bottomLeft: Radius.circular(borderRadius))),
-                  ),
-                  Expanded(
-                    child: Padding(
-                      padding: const EdgeInsets.all(4.0),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            widget.classBlock.departmentInfo,
-                            style:
-                                TextStyle(color: widget.classBlock.color.med),
-                          ),
-                          Text(
-                            widget.classBlock.id,
-                            style: TextStyle(
-                                color: widget.classBlock.color.med,
-                                fontWeight: FontWeight.bold),
-                          ),
-                          height > heightBreakpoint * widget.hourHeight
-                              ? Text(
-                                  widget.classBlock.name,
-                                  style: TextStyle(
-                                      color: widget.classBlock.color.med),
-                                )
-                              : Container(),
-                        ],
-                      ),
-                    ),
-                  ),
-                ],
+    return Opacity(
+      opacity: widget.hover ? 0.5 : 1,
+      child: Container(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.all(Radius.circular(borderRadius)),
+          color: widget.classBlock.color.light,
+        ),
+        margin: EdgeInsets.only(top: calculateOffset()),
+        height: height + (widget.hover ? hoverSizeIncrease : 0),
+        width: widget.dayWidth + (widget.hover ? hoverSizeIncrease : 0),
+        child: FlatButton(
+          padding: EdgeInsets.all(0),
+          onPressed: () {},
+          child: Row(
+            children: <Widget>[
+              Container(
+                width: 4,
+                decoration: BoxDecoration(
+                    color: widget.classBlock.color.med,
+                    borderRadius: BorderRadius.only(
+                        topLeft: Radius.circular(borderRadius),
+                        bottomLeft: Radius.circular(borderRadius))),
               ),
-            ),
-          )
-        : Container();
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.all(4.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        widget.classBlock.departmentInfo,
+                        style: TextStyle(color: widget.classBlock.color.med),
+                      ),
+                      Text(
+                        widget.classBlock.id,
+                        style: TextStyle(
+                            color: widget.classBlock.color.med,
+                            fontWeight: FontWeight.bold),
+                      ),
+                      height > heightBreakpoint * widget.hourHeight
+                          ? Text(
+                              widget.classBlock.name,
+                              style:
+                                  TextStyle(color: widget.classBlock.color.med),
+                            )
+                          : Container(),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 }
