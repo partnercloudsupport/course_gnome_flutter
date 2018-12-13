@@ -13,6 +13,9 @@ class Calendars {
 
   int currentCalendarIndex;
   List<Calendar> list;
+  Calendar currentCalendar() {
+    return list[currentCalendarIndex];
+  }
 
   Calendars();
 
