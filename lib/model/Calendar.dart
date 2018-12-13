@@ -6,77 +6,113 @@ import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:course_gnome/model/Course.dart';
+import 'package:course_gnome/utilities/Utilities.dart';
 
 class Calendars {
-  List<Calendar> list;
-  int currentCalendarIndex;
+  static const String initialCalName = "My Calendar";
 
-  Calendars() {
+  int currentCalendarIndex;
+  List<Calendar> list;
+
+  Calendars();
+
+  Calendars.fromJson(Map<String, dynamic> json) {
+    currentCalendarIndex = json['currentCalendarIndex'];
+    final List<Map<String, dynamic>> calendars = json['list'];
     list = [];
-    // try to load saved calendars,
-    _loadCalendars();
+    calendars
+        .forEach((cal) => list.add(Calendar.fromJson(cal, _calendarsUpdated)));
   }
 
-  // return true if load succeeded
-  _loadCalendars() async {
+  Map<String, dynamic> toJson() => {
+        'list': list,
+        'currentCalendarIndex': currentCalendarIndex,
+      };
+
+  init() async {
     final sp = await SharedPreferences.getInstance();
+    sp.clear();
     final jsonString = sp.getString("calendars");
-    if (json == null)
+    if (jsonString == null) {
+      print('No saved cals, create initial one');
+      list = [];
+      this.addCalendar(initialCalName);
       return;
-    final Calendars calendars = json.decode(jsonString);
-    this.list = calendars.list;
-    this.currentCalendarIndex = calendars.currentCalendarIndex;
-    return;
+    }
+    print('Load saved cals');
+    final Map<String, dynamic> json = jsonDecode(jsonString);
+    currentCalendarIndex = json['currentCalendarIndex'];
+    final List<dynamic> calendars = json['list'];
+    list = [];
+    calendars
+        .forEach((cal) => list.add(Calendar.fromJson(cal, _calendarsUpdated)));
   }
 
   addCalendar(String name) {
-    // get new id
-    int id;
-    while(true){
-      id = Random().nextInt(100);
-      if (list.indexWhere((cal)=>cal.id == id)==-1)
-        break;
-    }
-    final cal = Calendar(_calendarUpdated, name, id);
+    final cal = Calendar(_calendarsUpdated, name);
     list.add(cal);
-//    // behavior for now is we set this calendar to be the current one
-    currentCalendarIndex = list.length-1;
-  }
-  removeCalendar(Calendar calendar) {
-    list.remove(calendar);
+    // behavior for now is we set this calendar to be the current one
+    currentCalendarIndex = list.length - 1;
+    _calendarsUpdated();
   }
 
-  // call on any update to calendar
-  _calendarUpdated() async {
+  removeCalendar(Calendar calendar) {
+    list.remove(calendar);
+    _calendarsUpdated();
+  }
+
+  _calendarsUpdated() async {
     final sp = await SharedPreferences.getInstance();
     sp.setString("calendars", jsonEncode(this));
   }
 }
 
 class Calendar {
-  int id;
   String name;
   HashSet<String> ids;
   List<List<ClassBlock>> blocksByDay;
   VoidCallback calendarUpdated;
 
-  Calendar(calendarUpdated, name, id) {
+  Calendar(calendarUpdated, name) {
     this.calendarUpdated = calendarUpdated;
     this.name = name;
-    this.id = id;
     ids = HashSet<String>();
     blocksByDay = List.generate(7, (i) => List<ClassBlock>());
   }
 
-  toggleOffering(Course course, Offering offering, Color color) {
-    if (ids.contains(offering.id)) {
-      removeOffering(offering.id);
+  Calendar.fromJson(Map<String, dynamic> json, calendarUpdated) {
+    this.calendarUpdated = calendarUpdated;
+    name = json['name'];
+    ids = HashSet<String>();
+    List idsList = json['ids'] as List;
+    idsList.forEach((id) => ids.add(id));
+    final List<dynamic> blocksByDay = json['blocksByDay'];
+    this.blocksByDay = List.generate(7, (i) => List<ClassBlock>());
+    for (var i = 0; i < blocksByDay.length; ++i) {
+      blocksByDay[i].forEach(
+        (block) => this.blocksByDay[i].add(
+              ClassBlock.fromJson(block),
+            ),
+      );
+    }
+  }
+
+  Map<String, dynamic> toJson() => {
+        'name': name,
+        'ids': ids.toList(),
+        'blocksByDay': blocksByDay,
+      };
+
+  toggleOffering(Course course, Offering offering, CGColor color) {
+    if (ids.contains(offering.crn)) {
+      removeOffering(offering.crn);
     } else {
       addOffering(course, offering, color);
     }
   }
-  addOffering(Course course, Offering offering, Color color) {
-    ids.add(offering.id);
+
+  addOffering(Course course, Offering offering, CGColor color) {
+    ids.add(offering.crn);
     for (var classTime in offering.classTimes) {
       final offset = classTime.startTime.hour + classTime.startTime.minute / 60;
       final height = classTime.endTime.hour -
@@ -89,35 +125,43 @@ class Calendar {
           continue;
         }
         blocksByDay[i].add(ClassBlock(
-            offset, height, departmentInfo, offering.id, course.name, color));
+            offset, height, departmentInfo, offering.crn, course.name, color));
       }
     }
     calendarUpdated();
   }
+
   removeOffering(String id) {
     ids.remove(id);
-    blocksByDay.forEach((list) =>
-      list.removeWhere((block)=>block.id == id)
-    );
+    blocksByDay.forEach((list) => list.removeWhere((block) => block.id == id));
     calendarUpdated();
   }
-
 }
 
 class ClassBlock {
   double offset, height;
   String departmentInfo, id, name;
-  Color color;
+  CGColor color;
   ClassBlock(this.offset, this.height, this.departmentInfo, this.id, this.name,
       this.color);
+
+  ClassBlock.fromJson(Map<String, dynamic> json) {
+    offset = json['offset'];
+    height = json['height'];
+    departmentInfo = json['departmentInfo'];
+    id = json['name'];
+    name = json['name'];
+    color = CGColor(json["color-light"],json["color-med"],json["color-dark"]);
+  }
+
+  Map<String, dynamic> toJson() => {
+        'offset': offset,
+        'height': height,
+        'departmentInfo': departmentInfo,
+        'id': id,
+        'name': name,
+        'color-light': color.light.value,
+        'color-med': color.med.value,
+        'color-dark': color.dark.value,
+      };
 }
-
-
-//String formatTime() {
-//  var minute = classTime.startTime.minute;
-//  var minuteString = minute.toString();
-//  if (minute < 10) {
-//    minuteString += '0';
-//  }
-//  return classTime.startTime.hour.toString() + ':' + minuteString;
-//}

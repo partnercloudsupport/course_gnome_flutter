@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 class Course {
   String departmentAcronym, departmentNumber, name, credit, description, bulletinLink;
   List<Offering> offerings;
@@ -7,9 +8,9 @@ class Course {
 }
 
 class Offering {
-  String sectionNumber, status, id, instructors, bulletinLink;
+  String sectionNumber, status, crn, instructors;
   List<ClassTime> classTimes;
-  Offering({this.sectionNumber, this.status, this.id, this.classTimes, this.instructors, this.bulletinLink});
+  Offering({this.sectionNumber, this.status, this.crn, this.classTimes, this.instructors});
 }
 
 class ClassTime {
@@ -27,7 +28,7 @@ class ClassTime {
     return hourString + ':' + minuteString;
   }
 
-  String rangeToString() {
+  String timeRangeToString() {
     return timeToString(startTime) + '-' + timeToString(endTime);
   }
 }

@@ -11,6 +11,7 @@ class MyApp extends StatelessWidget {
       title: 'Flutter Demo',
       theme: ThemeData(
         primaryColor: const Color(0xFFD50110),
+//        buttonColor: const Color(0xFFD50110),
         fontFamily: 'Lato',
       ),
       home: SearchPage(),

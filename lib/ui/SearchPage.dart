@@ -26,7 +26,7 @@ class _SearchPageState extends State<SearchPage> {
   // cal
   var _calendars = Calendars();
 
-  _toggleOffering(Course course, Offering offering, Color color) {
+  _toggleOffering(Course course, Offering offering, CGColor color) {
     setState(() {
       _calendars.list[_calendars.currentCalendarIndex].toggleOffering(course, offering, color);
     });
@@ -86,7 +86,7 @@ class _SearchPageState extends State<SearchPage> {
     // TODO: implement initState
     super.initState();
     _calendars=Calendars();
-    _calendars.addCalendar("My Calendar");
+    _calendars.init();
   }
 
   @override
@@ -158,31 +158,11 @@ class _SearchPageState extends State<SearchPage> {
                     expandedOffering: _expandedOffering,
                     course: _courseResults[i],
                     borderRadius: _borderRadius,
-                    color: CGColors
-                        .colorArray400[i % CGColors.colorArray400.length],
+                    color: CGColors.array[i % CGColors.array.length],
                   );
                 },
                 addAutomaticKeepAlives: true,
                 childCount: _courseResults.length,
-
-
-
-//                b
-//                _searched
-//                    ? _classTimes.length > 0
-//                        ? List.generate(
-//                            _classTimes.length,
-//                            (i) => CourseCard(
-//                                  offeringExpanded: _offeringExpanded,
-//                                  expandedOffering: _expandedOffering,
-//                                  course: _classTimes[i],
-//                                  borderRadius: _borderRadius,
-//                                  color: CGColors.colorArray400[
-//                                      i % CGColors.colorArray400.length],
-//                                ),
-//                          )
-//                        : [Container(child: Text('No results'),)]
-//                    : [Container()]
               ),
             ),
           ],
@@ -198,7 +178,7 @@ class CourseCard extends StatelessWidget {
   final Calendar currentCalendar;
   final Course course;
   final double borderRadius;
-  final Color color;
+  final CGColor color;
   CourseCard(
       {
         this.toggleOffering,
@@ -245,7 +225,7 @@ class CourseCard extends StatelessWidget {
                             style: Theme.of(context)
                                 .textTheme
                                 .subtitle
-                                .copyWith(color: color),
+                                .copyWith(color: color.med),
                           ),
                           Text(
                             course.credit == '0'
@@ -254,14 +234,14 @@ class CourseCard extends StatelessWidget {
                             style: Theme.of(context)
                                 .textTheme
                                 .subtitle
-                                .copyWith(color: color),
+                                .copyWith(color: color.med),
                           ),
                         ],
                       ),
                       Text(
                         course.name,
                         style: Theme.of(context).textTheme.title.copyWith(
-                            color: color, fontWeight: FontWeight.bold),
+                            color: color.med, fontWeight: FontWeight.bold),
                       ),
                     ],
                   ),
@@ -292,7 +272,7 @@ class CourseCard extends StatelessWidget {
 class OfferingTile extends StatelessWidget {
   final Course course;
   final Function offeringExpanded, toggleOffering;
-  final Color color;
+  final CGColor color;
   final Offering expandedOffering, offering;
   final Calendar currentCalendar;
   OfferingTile(this.course, this.currentCalendar, this.toggleOffering,
@@ -300,8 +280,8 @@ class OfferingTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      color: currentCalendar.ids.contains(offering.id)
-          ? Colors.yellow
+      color: currentCalendar.ids.contains(offering.crn)
+          ? color.light
           : Colors.transparent,
       child: GestureDetector(
         onLongPress: () {
@@ -317,25 +297,25 @@ class OfferingTile extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Expanded(
-                  flex: 1,
+                  flex: 2,
                   child: Text(offering.sectionNumber,
-                      style: TextStyle(color: color))),
+                      style: TextStyle(color: color.med))),
               Expanded(
-                flex: 7,
+                flex: 8,
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: List.generate(
                     offering.classTimes.length,
-                    (k) => ClassTimeRow(offering.classTimes[k], color),
+                    (k) => ClassTimeRow(offering.classTimes[k], color.med),
                   ),
                 ),
               ),
               Expanded(
                   flex: 3,
-                  child: Text(offering.id, style: TextStyle(color: color))),
+                  child: Text(offering.crn, style: TextStyle(color: color.med),textAlign: TextAlign.right,)),
             ],
           ),
-          children: [ExtraInfoContainer(color, offering)],
+          children: [ExtraInfoContainer(color.med, offering, course)],
         ),
       ),
     );
@@ -370,7 +350,7 @@ class ClassTimeRow extends StatelessWidget {
         Padding(
           padding: const EdgeInsets.only(left: 3.0),
           child: Text(
-            classTime.rangeToString(),
+            classTime.timeRangeToString(),
             style: TextStyle(color: color),
           ),
         )
@@ -382,10 +362,11 @@ class ClassTimeRow extends StatelessWidget {
 class ExtraInfoContainer extends StatelessWidget {
   final Color color;
   final Offering offering;
-  ExtraInfoContainer(this.color, this.offering);
+  final Course course;
+  ExtraInfoContainer(this.color, this.offering, this.course);
 
   openCoursePage() async {
-    final url = offering.bulletinLink;
+    final url = course.bulletinLink;
     if (await canLaunch(url)) {
     await launch(url);
     } else {
@@ -401,14 +382,16 @@ class ExtraInfoContainer extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
+          offering.instructors != null ?
           Text('Instructors: ' + offering.instructors,
-              style: TextStyle(color: color)),
+              style: TextStyle(color: color)) : Container(),
+          course.bulletinLink != null ?
           FlatButton.icon(
             padding: EdgeInsets.all(0),
             icon: Icon(Icons.open_in_browser, color: color,),
             label: Text('See More',style: TextStyle(color: color),),
             onPressed: ()=>openCoursePage(),
-          )
+          ) : Container(),
         ],
       ),
     );
