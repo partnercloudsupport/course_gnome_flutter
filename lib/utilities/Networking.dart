@@ -21,9 +21,10 @@ class CourseResults {
 }
 
 class Networking {
+
   static TimeOfDay _stringToTimeOfDay(String time) {
-    final HMS = time.split(":");
-    return TimeOfDay(hour: int.parse(HMS[0]), minute: int.parse(HMS[1]));
+    final hms = time.split(":");
+    return TimeOfDay(hour: int.parse(hms[0]), minute: int.parse(hms[1]));
   }
 
   static List<bool> _classTimeToDays(classTime) {
@@ -81,18 +82,20 @@ class Networking {
 
   static Future<CourseResults> getCourses(SearchObject searchObject, int offset) async {
     try {
-      final dynamic resp = await CloudFunctions.instance.call(
-        functionName: 'getCourses',
-        parameters: <String, dynamic>{
-          'name': searchObject.name,
-          'limit': 10,
-          'offset': offset,
-        },
-      );
-      final coursesJson = resp['courses'];
-      final courses = jsonDecode(coursesJson);
-//      final courses = jsonDecode(jsonString);
-      return CourseResults(results: _parseCourses(courses), total: resp['count']);
+//      final dynamic resp = await CloudFunctions.instance.call(
+//        functionName: 'getCourses',
+//        parameters: <String, dynamic>{
+//          'name': searchObject.name,
+//          'limit': 10,
+//          'offset': offset,
+//        },
+//      );
+//      final coursesJson = resp['courses'];
+//      final courses = jsonDecode(coursesJson);
+//      return CourseResults(results: _parseCourses(courses), total: resp['count']);
+
+      final courses = jsonDecode(jsonString);
+      return CourseResults(results: _parseCourses(courses), total: 9);
     } on CloudFunctionsException catch (e) {
       print('caught firebase functions exception');
       print(e.code);

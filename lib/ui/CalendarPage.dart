@@ -82,114 +82,84 @@ class _CalendarPageState extends State<CalendarPage>
     Navigator.pop(context);
   }
 
-  _showAddCalendarDialog() {
+  _showDialog(String title, Widget body, String opOneText, String opTwoText,
+      VoidCallback opOneAction, VoidCallback opTwoAction) {
     showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return SimpleDialog(
-          title: Text('Add Calendar'),
-          children: <Widget>[
-            Container(
-              padding: EdgeInsets.symmetric(horizontal: 20),
-              child: TextField(
-                  autofocus: true,
-                  controller: _calendarNameController,
-                  textCapitalization: TextCapitalization.words,
-                  onSubmitted: (text) => _addCalendar(),
-                  maxLength: 20,
-                  maxLengthEnforced: true,
-                  style: Theme.of(context).textTheme.headline),
-            ),
-            ButtonBar(
-              alignment: MainAxisAlignment.center,
-              children: <Widget>[
-                RaisedButton(
-                  child: Text('Add'),
-                  onPressed: () => _addCalendar(),
-                ),
-                FlatButton(
-                  child: Text('Cancel'),
-                  onPressed: () => Navigator.pop(context),
-                )
-              ],
-            )
-          ],
-        );
-      },
+        context: context,
+        builder: (BuildContext context) {
+          return SimpleDialog(
+            title: Text(title),
+            children: <Widget>[
+              Container(
+                padding: EdgeInsets.symmetric(horizontal: 20),
+                child: body,
+              ),
+              ButtonBar(
+                alignment: MainAxisAlignment.center,
+                children: <Widget>[
+                  RaisedButton(
+                    child: Text(opOneText),
+                    onPressed: opOneAction,
+                  ),
+                  FlatButton(
+                    child: Text(opTwoText),
+                    onPressed: opTwoAction,
+                  )
+                ],
+              )
+            ],
+          );
+        });
+  }
+
+  Widget _textField() {
+    return TextField(
+        autofocus: true,
+        controller: _calendarNameController,
+        textCapitalization: TextCapitalization.words,
+        onSubmitted: (text) => _addCalendar(),
+        maxLength: 20,
+        maxLengthEnforced: true,
+        style: Theme.of(context).textTheme.headline);
+  }
+
+  _showAddCalendarDialog() {
+    _showDialog(
+      'Add Calendar',
+      _textField(),
+      'Add',
+      'Cancel',
+      _addCalendar,
+      () => Navigator.pop(context),
     );
   }
 
   _showEditCalendarDialog() {
     _calendarNameController.text =
         widget.calendars.list[widget.calendars.currentCalendarIndex].name;
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return SimpleDialog(
-          title: Text('Edit Calendar'),
-          children: <Widget>[
-            Container(
-              padding: EdgeInsets.symmetric(horizontal: 20),
-              child: TextField(
-                  autofocus: true,
-                  controller: _calendarNameController,
-                  textCapitalization: TextCapitalization.words,
-                  onSubmitted: (text) => _editCalendar(),
-                  maxLength: 20,
-                  maxLengthEnforced: true,
-                  style: Theme.of(context).textTheme.headline),
-            ),
-            ButtonBar(
-              alignment: MainAxisAlignment.center,
-              children: <Widget>[
-                RaisedButton(
-                  child: Text('Save'),
-                  onPressed: () => _editCalendar(),
-                ),
-                FlatButton(
-                  child: Text('Cancel'),
-                  onPressed: () {
-                    _calendarNameController.clear();
-                    Navigator.pop(context);
-                  },
-                )
-              ],
-            )
-          ],
-        );
+    _showDialog(
+      'Edit Calendar',
+      _textField(),
+      'Save',
+      'Cancel',
+      _editCalendar,
+      () {
+        _calendarNameController.clear();
+        Navigator.pop(context);
       },
     );
   }
 
   _showDeleteCalendarDialog() {
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return SimpleDialog(
-          title: Text('Delete Calendar'),
-          children: <Widget>[
-            Container(
-                padding: EdgeInsets.symmetric(horizontal: 20),
-                child: Text('Delete calendar ' +
-                    widget.calendars.list[widget.calendars.currentCalendarIndex]
-                        .name +
-                    '?')),
-            ButtonBar(
-              alignment: MainAxisAlignment.center,
-              children: <Widget>[
-                RaisedButton(
-                  child: Text('Delete'),
-                  onPressed: () => _deleteCalendar(),
-                ),
-                FlatButton(
-                  child: Text('Cancel'),
-                  onPressed: () => Navigator.pop(context),
-                )
-              ],
-            )
-          ],
-        );
-      },
+    _showDialog(
+      'Delete Calendar',
+      Text('Delete calendar ' +
+          widget.calendars.list[widget.calendars.currentCalendarIndex].name +
+          '?'),
+      'Delete',
+      'Cancel',
+      _deleteCalendar,
+      () => Navigator.pop(context),
     );
   }
 
@@ -209,8 +179,9 @@ class _CalendarPageState extends State<CalendarPage>
       initialIndex: widget.calendars.currentCalendarIndex,
     );
     _tabController.addListener(_tabChanged);
-    hourController = ScrollController(initialScrollOffset: hourHeight*4);
-    verticalCalController = ScrollController(initialScrollOffset: hourHeight*4);
+    hourController = ScrollController(initialScrollOffset: hourHeight * 4);
+    verticalCalController =
+        ScrollController(initialScrollOffset: hourHeight * 4);
     dayController = ScrollController(initialScrollOffset: dayWidth);
     horizontalCalController = ScrollController(initialScrollOffset: dayWidth);
     horizontalCalController.addListener(calHorizontallyScrolled);

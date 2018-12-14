@@ -22,9 +22,11 @@ class _SearchPageState extends State<SearchPage> {
   Offering _expandedOffering;
   final _searchTextFieldController = TextEditingController();
   var _searching = false;
+  var _showingSearchResults = false;
 
   var _offset = 0;
   // search object
+  var _oldSearchObject = SearchObject();
   var _searchObject = SearchObject();
   var _courseResults = CourseResults(total: 0, results: []);
 
@@ -48,6 +50,7 @@ class _SearchPageState extends State<SearchPage> {
       return;
     }
     setState(() {
+      _showingSearchResults = false;
       _offset = 0;
       _searchObject.name = name;
       _searching = true;
@@ -82,6 +85,19 @@ class _SearchPageState extends State<SearchPage> {
     setState(() {
       _courseResults.clear();
     });
+  }
+
+  _onSearchFieldTap() {
+    setState(() {
+      _showingSearchResults = true;
+    });
+  }
+
+  _dismissSearch() {
+    setState(() {
+      _showingSearchResults = false;
+    });
+    FocusScope.of(context).requestFocus(new FocusNode());
   }
 
   // TODO
@@ -121,10 +137,15 @@ class _SearchPageState extends State<SearchPage> {
         elevation: 0,
         title: Text('Search'),
         centerTitle: false,
-        leading: IconButton(
-          icon: Icon(Icons.person),
-          onPressed: _goToProfile,
-        ),
+        leading: _showingSearchResults
+            ? IconButton(
+                icon: Icon(Icons.arrow_back_ios),
+                onPressed: _dismissSearch,
+              )
+            : IconButton(
+                icon: Icon(Icons.person),
+                onPressed: _goToProfile,
+              ),
         actions: [
           //TODO
 //          IconButton(
@@ -147,8 +168,9 @@ class _SearchPageState extends State<SearchPage> {
             SliverAppBar(
               title: SafeArea(
                 child: Container(
-                  margin: EdgeInsets.only(bottom: 5),
+                  margin: EdgeInsets.only(bottom: 10),
                   child: TextField(
+                    onTap: _onSearchFieldTap,
                     controller: _searchTextFieldController,
                     onSubmitted: (text) => _search(text),
                     decoration: InputDecoration(
@@ -178,12 +200,6 @@ class _SearchPageState extends State<SearchPage> {
               floating: true,
               snap: true,
             ),
-            _searching
-                ? SliverList(
-                    delegate:
-                        SliverChildListDelegate([LinearProgressIndicator()]),
-                  )
-                : SliverPadding(padding: EdgeInsets.all(0)),
             SliverList(
               delegate: SliverChildBuilderDelegate(
                 (BuildContext context, int i) {
@@ -203,7 +219,7 @@ class _SearchPageState extends State<SearchPage> {
               ),
             ),
             SliverPadding(
-              padding: EdgeInsets.symmetric(vertical: 30),
+              padding: EdgeInsets.only(top: 30),
               sliver: SliverList(
                 delegate: SliverChildListDelegate(
                   [
@@ -275,16 +291,19 @@ class CourseCard extends StatelessWidget {
       bottom: false,
       child: Card(
         margin: EdgeInsets.fromLTRB(10, 10, 10, 0),
-//      decoration: BoxDecoration(
-//          border: Border(left: BorderSide(color: color))
-//      ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           mainAxisSize: MainAxisSize.min,
           children: [
             Container(
-              height: 3,
-              color: color.med,
+              decoration: BoxDecoration(
+                color: color.med,
+                borderRadius: const BorderRadius.only(
+                  topLeft: const Radius.circular(2),
+                  topRight: const Radius.circular(2),
+                ),
+              ),
+              height: 4,
             ),
             Container(
               padding: EdgeInsets.all(7),
@@ -413,7 +432,7 @@ class ClassTimeRow extends StatelessWidget {
                   width: 12,
                   height: 12,
                   decoration: BoxDecoration(
-                    color: classTime.days[i] ? color : Colors.transparent,
+                    color: classTime.days[i + 1] ? color : Colors.transparent,
                     border: Border.all(color: color, width: 1),
                     borderRadius: BorderRadius.all(
                       Radius.circular(2),
