@@ -5,6 +5,21 @@ import 'package:cloud_functions/cloud_functions.dart';
 
 import 'package:course_gnome/model/Course.dart';
 
+class SearchObject {
+  String name;
+  SearchObject({this.name});
+}
+
+class CourseResults {
+  int total;
+  List<Course> results;
+  CourseResults({this.total, this.results});
+  clear() {
+    total = 0;
+    results.clear();
+  }
+}
+
 class Networking {
   static TimeOfDay _stringToTimeOfDay(String time) {
     final HMS = time.split(":");
@@ -64,18 +79,20 @@ class Networking {
     );
   }
 
-  static Future<List<Course>> getCourses(String text) async {
+  static Future<CourseResults> getCourses(SearchObject searchObject, int offset) async {
     try {
-//      final dynamic resp = await CloudFunctions.instance.call(
-//        functionName: 'getCourses',
-//        parameters: <String, dynamic>{
-////          'name': text,
-//        },
-//      );
-//      final coursesJson = resp['courses'];
-//      final courses = jsonDecode(coursesJson);
-      final courses = jsonDecode(jsonString);
-      return _parseCourses(courses);
+      final dynamic resp = await CloudFunctions.instance.call(
+        functionName: 'getCourses',
+        parameters: <String, dynamic>{
+          'name': searchObject.name,
+          'limit': 10,
+          'offset': offset,
+        },
+      );
+      final coursesJson = resp['courses'];
+      final courses = jsonDecode(coursesJson);
+//      final courses = jsonDecode(jsonString);
+      return CourseResults(results: _parseCourses(courses), total: resp['count']);
     } on CloudFunctionsException catch (e) {
       print('caught firebase functions exception');
       print(e.code);

@@ -34,7 +34,7 @@ class Calendars {
 
   init() async {
     final sp = await SharedPreferences.getInstance();
-    sp.clear();
+//    sp.clear();
     final jsonString = sp.getString("calendars");
     if (jsonString == null) {
       print('No saved cals, create initial one');

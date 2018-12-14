@@ -209,8 +209,8 @@ class _CalendarPageState extends State<CalendarPage>
       initialIndex: widget.calendars.currentCalendarIndex,
     );
     _tabController.addListener(_tabChanged);
-    hourController = ScrollController();
-    verticalCalController = ScrollController();
+    hourController = ScrollController(initialScrollOffset: hourHeight*4);
+    verticalCalController = ScrollController(initialScrollOffset: hourHeight*4);
     dayController = ScrollController(initialScrollOffset: dayWidth);
     horizontalCalController = ScrollController(initialScrollOffset: dayWidth);
     horizontalCalController.addListener(calHorizontallyScrolled);

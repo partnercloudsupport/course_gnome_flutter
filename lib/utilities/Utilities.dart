@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+
 class CGColor {
   Color light, med, dark;
   CGColor(int light, int med, int dark){
@@ -10,6 +11,8 @@ class CGColor {
 }
 
 class CGColors {
+
+  static final cgred = const Color(0xFFD50110);
 
   static final red = CGColor(0xffFCE6EA, 0xffD74660, 0xff96263A);
   static final orange = CGColor(0xffFDEADC,0xffE4813D,0xffA05320);

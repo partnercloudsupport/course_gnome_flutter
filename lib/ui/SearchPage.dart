@@ -23,32 +23,60 @@ class _SearchPageState extends State<SearchPage> {
   final _searchTextFieldController = TextEditingController();
   var _searching = false;
 
+  var _offset = 0;
+  // search object
+  var _searchObject = SearchObject();
+  var _courseResults = CourseResults(total: 0, results: []);
+
   // cal
   var _calendars = Calendars();
 
   _toggleOffering(Course course, Offering offering, CGColor color) {
     setState(() {
-      _calendars.list[_calendars.currentCalendarIndex].toggleOffering(course, offering, color);
+      _calendars.list[_calendars.currentCalendarIndex]
+          .toggleOffering(course, offering, color);
     });
   }
-  var _courseResults = List<Course>();
+
   _offeringExpanded(Offering offering) {
     _expandedOffering = offering;
   }
-  _search(String text) async {
-    if (text.isEmpty) {
+
+  _search(String name) async {
+    if (name.isEmpty) {
       _clearSearch();
       return;
     }
     setState(() {
+      _offset = 0;
+      _searchObject.name = name;
       _searching = true;
     });
-    final List<Course> results = await Networking.getCourses(text);
+    _courseResults = await Networking.getCourses(_searchObject, _offset);
     setState(() {
       _searching = false;
-      _courseResults = results;
     });
   }
+
+  _loadMoreResults() async {
+    setState(() {
+      _searching = true;
+      _offset += 10;
+    });
+    try {
+      final _moreResults = await Networking.getCourses(_searchObject, _offset);
+      setState(() {
+        _searching = false;
+        _courseResults.results.addAll(_moreResults.results);
+      });
+    } catch (err) {
+      setState(() {
+        _searching = false;
+        _offset -= 10;
+      });
+    }
+  }
+
   _clearSearch() {
     _searchTextFieldController.clear();
     setState(() {
@@ -70,9 +98,7 @@ class _SearchPageState extends State<SearchPage> {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => CalendarPage(
-          _calendars
-        ),
+        builder: (context) => CalendarPage(_calendars),
       ),
     );
   }
@@ -80,12 +106,11 @@ class _SearchPageState extends State<SearchPage> {
   // TODO
   _goToFilter() {}
 
-
   @override
   void initState() {
     // TODO: implement initState
     super.initState();
-    _calendars=Calendars();
+    _calendars = Calendars();
     _calendars.init();
   }
 
@@ -114,55 +139,112 @@ class _SearchPageState extends State<SearchPage> {
         ],
       ),
       body: SafeArea(
+        top: false,
+        left: false,
+        right: false,
         child: CustomScrollView(
           slivers: <Widget>[
             SliverAppBar(
-              title: Container(
-                margin: EdgeInsets.only(bottom: 5),
-                child: TextField(
-                  controller: _searchTextFieldController,
-                  onSubmitted: (text) => _search(text),
-                  decoration: InputDecoration(
-                    border: InputBorder.none,
-                    hintText: 'Search for anything',
-                    prefixIcon: Icon(Icons.search),
-                    suffixIcon: _searchTextFieldController.text.isNotEmpty ? IconButton(
-                      icon: Icon(Icons.clear, color: Colors.grey,),
-                      onPressed: ()=>_clearSearch(),
-                    ) : null,
+              title: SafeArea(
+                child: Container(
+                  margin: EdgeInsets.only(bottom: 5),
+                  child: TextField(
+                    controller: _searchTextFieldController,
+                    onSubmitted: (text) => _search(text),
+                    decoration: InputDecoration(
+                      border: InputBorder.none,
+                      hintText: 'Search for anything',
+                      prefixIcon: Icon(Icons.search),
+                      suffixIcon: _searchTextFieldController.text.isNotEmpty
+                          ? IconButton(
+                              icon: Icon(
+                                Icons.clear,
+                                color: Colors.grey,
+                              ),
+                              onPressed: () => _clearSearch(),
+                            )
+                          : null,
+                    ),
+                    textCapitalization: TextCapitalization.sentences,
+                    textInputAction: TextInputAction.search,
                   ),
-                  textCapitalization: TextCapitalization.sentences,
-                  textInputAction: TextInputAction.search,
-                ),
-                decoration: BoxDecoration(
-                  borderRadius: const BorderRadius.all(
-                      const Radius.circular(_borderRadius)),
-                  color: Colors.white,
+                  decoration: BoxDecoration(
+                    borderRadius: const BorderRadius.all(
+                        const Radius.circular(_borderRadius)),
+                    color: Colors.white,
+                  ),
                 ),
               ),
               floating: true,
               snap: true,
             ),
-            _searching ? SliverList(
-              delegate: SliverChildListDelegate(
-                [LinearProgressIndicator()]
-              ),
-            ) : SliverPadding(padding: EdgeInsets.all(0)),
+            _searching
+                ? SliverList(
+                    delegate:
+                        SliverChildListDelegate([LinearProgressIndicator()]),
+                  )
+                : SliverPadding(padding: EdgeInsets.all(0)),
             SliverList(
               delegate: SliverChildBuilderDelegate(
                 (BuildContext context, int i) {
                   return CourseCard(
                     offeringExpanded: _offeringExpanded,
-                    currentCalendar: _calendars.list[_calendars.currentCalendarIndex],
+                    currentCalendar:
+                        _calendars.list[_calendars.currentCalendarIndex],
                     toggleOffering: _toggleOffering,
                     expandedOffering: _expandedOffering,
-                    course: _courseResults[i],
+                    course: _courseResults.results[i],
                     borderRadius: _borderRadius,
                     color: CGColors.array[i % CGColors.array.length],
                   );
                 },
                 addAutomaticKeepAlives: true,
-                childCount: _courseResults.length,
+                childCount: _courseResults.results.length,
+              ),
+            ),
+            SliverPadding(
+              padding: EdgeInsets.symmetric(vertical: 30),
+              sliver: SliverList(
+                delegate: SliverChildListDelegate(
+                  [
+                    Column(
+                      children: [
+                        !_searching
+                            ? _courseResults.total > _offset + 10
+                                ? RaisedButton.icon(
+                                    icon: Icon(
+                                      Icons.expand_more,
+                                      color: Colors.white,
+                                    ),
+                                    color: CGColors.cgred,
+                                    label: Text(
+                                      'Load More',
+                                      style: TextStyle(
+                                          color: Colors.white,
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 16),
+                                    ),
+                                    onPressed: _loadMoreResults,
+                                  )
+                                : Container()
+                            : Container(
+                                width: 60,
+                                child: AspectRatio(
+                                  aspectRatio: 1.0,
+                                  child: Padding(
+                                    padding: EdgeInsets.all(12.0),
+                                    child: CircularProgressIndicator(
+                                      valueColor: AlwaysStoppedAnimation(
+                                        CGColors.cgred,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                      ],
+                    )
+                  ],
+                ),
               ),
             ),
           ],
@@ -180,8 +262,7 @@ class CourseCard extends StatelessWidget {
   final double borderRadius;
   final CGColor color;
   CourseCard(
-      {
-        this.toggleOffering,
+      {this.toggleOffering,
       this.offeringExpanded,
       this.currentCalendar,
       this.expandedOffering,
@@ -190,80 +271,71 @@ class CourseCard extends StatelessWidget {
       this.color});
   @override
   Widget build(BuildContext context) {
-    return Card(
-      margin: EdgeInsets.fromLTRB(10, 10, 10, 0),
+    return SafeArea(
+      bottom: false,
+      child: Card(
+        margin: EdgeInsets.fromLTRB(10, 10, 10, 0),
 //      decoration: BoxDecoration(
 //          border: Border(left: BorderSide(color: color))
 //      ),
-      child: Row(
-        children: <Widget>[
-//            Container(
-//              width: 4,
-//              decoration: BoxDecoration(
-//                color: color,
-//                borderRadius: BorderRadius.only(
-//                  topLeft: Radius.circular(borderRadius),
-//                  bottomLeft: Radius.circular(borderRadius),
-//                ),
-//              ),
-//            ),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(
-                  padding: EdgeInsets.all(7),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: <Widget>[
-                          Text(
-                            course.departmentAcronym + course.departmentNumber,
-                            style: Theme.of(context)
-                                .textTheme
-                                .subtitle
-                                .copyWith(color: color.med),
-                          ),
-                          Text(
-                            course.credit == '0'
-                                ? course.credit + ' credit'
-                                : course.credit + ' credits',
-                            style: Theme.of(context)
-                                .textTheme
-                                .subtitle
-                                .copyWith(color: color.med),
-                          ),
-                        ],
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              height: 3,
+              color: color.med,
+            ),
+            Container(
+              padding: EdgeInsets.all(7),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: <Widget>[
+                      Text(
+                        course.departmentAcronym + course.departmentNumber,
+                        style: Theme.of(context)
+                            .textTheme
+                            .subtitle
+                            .copyWith(color: color.med),
                       ),
                       Text(
-                        course.name,
-                        style: Theme.of(context).textTheme.title.copyWith(
-                            color: color.med, fontWeight: FontWeight.bold),
+                        course.credit == '0'
+                            ? course.credit + ' credit'
+                            : course.credit + ' credits',
+                        style: Theme.of(context)
+                            .textTheme
+                            .subtitle
+                            .copyWith(color: color.med),
                       ),
                     ],
                   ),
-                ),
-                // offerings
-                Column(
-                  children: List.generate(
-                    course.offerings.length,
-                    (j) => OfferingTile(
-                      course,
-                        currentCalendar,
-                        toggleOffering,
-                        offeringExpanded,
-                        expandedOffering,
-                        color,
-                        course.offerings[j]),
+                  Text(
+                    course.name,
+                    style: Theme.of(context).textTheme.title.copyWith(
+                        color: color.med, fontWeight: FontWeight.bold),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
-        ],
+            // offerings
+            Column(
+              children: List.generate(
+                course.offerings.length,
+                (j) => OfferingTile(
+                    course,
+                    currentCalendar,
+                    toggleOffering,
+                    offeringExpanded,
+                    expandedOffering,
+                    color,
+                    course.offerings[j]),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -286,12 +358,11 @@ class OfferingTile extends StatelessWidget {
       child: GestureDetector(
         onLongPress: () {
           HapticFeedback.selectionClick();
-        toggleOffering(course, offering, color);
+          toggleOffering(course, offering, color);
         },
         child: ExpansionTile(
           onExpansionChanged: offeringExpanded(offering),
           initiallyExpanded: expandedOffering == offering,
-          key: key,
           title: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -312,7 +383,11 @@ class OfferingTile extends StatelessWidget {
               ),
               Expanded(
                   flex: 3,
-                  child: Text(offering.crn, style: TextStyle(color: color.med),textAlign: TextAlign.right,)),
+                  child: Text(
+                    offering.crn,
+                    style: TextStyle(color: color.med),
+                    textAlign: TextAlign.right,
+                  )),
             ],
           ),
           children: [ExtraInfoContainer(color.med, offering, course)],
@@ -368,9 +443,9 @@ class ExtraInfoContainer extends StatelessWidget {
   openCoursePage() async {
     final url = course.bulletinLink;
     if (await canLaunch(url)) {
-    await launch(url);
+      await launch(url);
     } else {
-    throw 'Could not launch $url';
+      throw 'Could not launch $url';
     }
   }
 
@@ -382,16 +457,24 @@ class ExtraInfoContainer extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
-          offering.instructors != null ?
-          Text('Instructors: ' + offering.instructors,
-              style: TextStyle(color: color)) : Container(),
-          course.bulletinLink != null ?
-          FlatButton.icon(
-            padding: EdgeInsets.all(0),
-            icon: Icon(Icons.open_in_browser, color: color,),
-            label: Text('See More',style: TextStyle(color: color),),
-            onPressed: ()=>openCoursePage(),
-          ) : Container(),
+          offering.instructors != null
+              ? Text('Instructors: ' + offering.instructors,
+                  style: TextStyle(color: color))
+              : Container(),
+          course.bulletinLink != null
+              ? FlatButton.icon(
+                  padding: EdgeInsets.all(0),
+                  icon: Icon(
+                    Icons.open_in_browser,
+                    color: color,
+                  ),
+                  label: Text(
+                    'See More',
+                    style: TextStyle(color: color),
+                  ),
+                  onPressed: () => openCoursePage(),
+                )
+              : Container(),
         ],
       ),
     );
