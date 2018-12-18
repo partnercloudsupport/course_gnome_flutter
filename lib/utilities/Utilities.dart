@@ -13,6 +13,7 @@ class CGColor {
 class CGColors {
 
   static final cgred = const Color(0xFFD50110);
+  static final lightGray = const Color(0xffFAFAFA);
 
   static final red = CGColor(0xffFCE6EA, 0xffD74660, 0xff96263A);
   static final orange = CGColor(0xffFDEADC,0xffE4813D,0xffA05320);
