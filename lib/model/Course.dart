@@ -10,7 +10,8 @@ class Course {
 class Offering {
   String sectionNumber, status, crn, instructors;
   List<ClassTime> classTimes;
-  Offering({this.sectionNumber, this.status, this.crn, this.classTimes, this.instructors});
+  List<Offering> linkedOfferings;
+  Offering({this.sectionNumber, this.status, this.crn, this.classTimes, this.instructors, this.linkedOfferings});
 }
 
 class ClassTime {

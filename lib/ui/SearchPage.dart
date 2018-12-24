@@ -339,18 +339,31 @@ class CourseCard extends StatelessWidget {
                 ],
               ),
             ),
-            // offerings
             Column(
               children: List.generate(
                 course.offerings.length,
-                (j) => OfferingTile(
-                    course,
-                    currentCalendar,
-                    toggleOffering,
-                    offeringExpanded,
-                    expandedOffering,
-                    color,
-                    course.offerings[j]),
+                (j) => Container(
+                      color:
+                          currentCalendar.ids.contains(course.offerings[j].crn)
+                              ? color.light
+                              : Colors.transparent,
+                      child: ExpansionTile(
+                        onExpansionChanged:
+                            offeringExpanded(course.offerings[j]),
+                        initiallyExpanded:
+                            expandedOffering == course.offerings[j],
+                        title: GestureDetector(
+                          onLongPress: () {
+                            HapticFeedback.selectionClick();
+                            toggleOffering(course, course.offerings[j], color);
+                          },
+                          child: OfferingRow(color.med, course.offerings[j]),
+                        ),
+                        children: [
+                          ExtraInfoContainer(color, course.offerings[j], course)
+                        ],
+                      ),
+                    ),
               ),
             ),
           ],
@@ -360,58 +373,77 @@ class CourseCard extends StatelessWidget {
   }
 }
 
-class OfferingTile extends StatelessWidget {
-  final Course course;
-  final Function offeringExpanded, toggleOffering;
-  final CGColor color;
-  final Offering expandedOffering, offering;
-  final Calendar currentCalendar;
-  OfferingTile(this.course, this.currentCalendar, this.toggleOffering,
-      this.offeringExpanded, this.expandedOffering, this.color, this.offering);
+class Breakpoints {
+  static int sm = 400;
+  static int md = 600;
+  static int lg = 800;
+}
+
+class OfferingRow extends StatelessWidget {
+  final Color color;
+  final Offering offering;
+  OfferingRow(this.color, this.offering);
+  @override
+  Widget build(BuildContext context) {
+    final width = MediaQuery.of(context).size.width;
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+//              CGChip(),
+        Expanded(
+          flex: 2,
+          child: Text(
+            offering.sectionNumber,
+            style: TextStyle(color: color),
+          ),
+        ),
+        width > Breakpoints.sm && offering.instructors != null
+            ? Expanded(
+                flex: 3,
+                child: Text(
+                  offering.instructors,
+                  style: TextStyle(color: color),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              )
+            : Container(),
+        Expanded(
+          flex: 8,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: List.generate(
+              offering.classTimes.length,
+              (k) => ClassTimeRow(offering.classTimes[k], color),
+            ),
+          ),
+        ),
+        Expanded(
+          flex: 3,
+          child: Text(
+            offering.crn,
+            style: TextStyle(color: color),
+            textAlign: TextAlign.right,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class CGChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      color: currentCalendar.ids.contains(offering.crn)
-          ? color.light
-          : Colors.transparent,
-      child: GestureDetector(
-        onLongPress: () {
-          HapticFeedback.selectionClick();
-          toggleOffering(course, offering, color);
-        },
-        child: ExpansionTile(
-          onExpansionChanged: offeringExpanded(offering),
-          initiallyExpanded: expandedOffering == offering,
-          title: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(
-                  flex: 2,
-                  child: Text(offering.sectionNumber,
-                      style: TextStyle(color: color.med))),
-              Expanded(
-                flex: 8,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: List.generate(
-                    offering.classTimes.length,
-                    (k) => ClassTimeRow(offering.classTimes[k], color.med),
-                  ),
-                ),
-              ),
-              Expanded(
-                  flex: 3,
-                  child: Text(
-                    offering.crn,
-                    style: TextStyle(color: color.med),
-                    textAlign: TextAlign.right,
-                  )),
-            ],
-          ),
-          children: [ExtraInfoContainer(color.med, offering, course)],
-        ),
+      decoration: BoxDecoration(
+          color: Color(0xffffcdd2),
+          borderRadius: BorderRadius.all(Radius.circular(15))),
+      child: Text(
+        'C',
+        style: TextStyle(color: Color(0xffc62828)),
       ),
+      padding: EdgeInsets.fromLTRB(8, 4, 8, 4),
+      margin: EdgeInsets.only(right: 5),
     );
   }
 }
@@ -428,9 +460,9 @@ class ClassTimeRow extends StatelessWidget {
           children: List.generate(
             5,
             (i) => Container(
-                  margin: EdgeInsets.only(right: 2),
-                  width: 12,
-                  height: 12,
+                  margin: EdgeInsets.only(right: 2, top: 2),
+                  width: 13,
+                  height: 13,
                   decoration: BoxDecoration(
                     color: classTime.days[i + 1] ? color : Colors.transparent,
                     border: Border.all(color: color, width: 1),
@@ -454,7 +486,7 @@ class ClassTimeRow extends StatelessWidget {
 }
 
 class ExtraInfoContainer extends StatelessWidget {
-  final Color color;
+  final CGColor color;
   final Offering offering;
   final Course course;
   ExtraInfoContainer(this.color, this.offering, this.course);
@@ -467,35 +499,78 @@ class ExtraInfoContainer extends StatelessWidget {
       throw 'Could not launch $url';
     }
   }
+//      padding: EdgeInsets.fromLTRB(15, 0, 15, 10),
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: EdgeInsets.fromLTRB(15, 0, 15, 10),
-      alignment: Alignment.centerLeft,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: <Widget>[
-          offering.instructors != null
-              ? Text('Instructors: ' + offering.instructors,
-                  style: TextStyle(color: color))
-              : Container(),
-          course.bulletinLink != null
-              ? FlatButton.icon(
-                  padding: EdgeInsets.all(0),
-                  icon: Icon(
-                    Icons.open_in_browser,
-                    color: color,
-                  ),
-                  label: Text(
-                    'See More',
-                    style: TextStyle(color: color),
-                  ),
-                  onPressed: () => openCoursePage(),
-                )
-              : Container(),
-        ],
-      ),
+    final width = MediaQuery.of(context).size.width;
+    String locationString =
+        offering.classTimes.length > 1 ? 'Locations: ' : 'Location: ';
+    offering.classTimes
+        .forEach((time) => locationString += time.location + ',');
+    locationString = Helper.removeLastChar(locationString);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        Padding(
+          padding: const EdgeInsets.fromLTRB(15, 0, 15, 10),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: <Widget>[
+              width < Breakpoints.sm && offering.instructors != null
+                  ? Text(
+                      'Instructors: ' + offering.instructors,
+                      style: TextStyle(color: color.med),
+                    )
+                  : Container(),
+              Text(
+                locationString,
+                style: TextStyle(color: color.med),
+              ),
+            ],
+          ),
+        ),
+        offering.linkedOfferings != null
+            ? Container(
+                padding: EdgeInsets.fromLTRB(15, 10, 15, 5),
+                color: CGColors.lightGray,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    Text(
+                      'Choose a Linked Course',
+                      style: TextStyle(color: color.med),
+                    ),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: List.generate(
+                        offering.linkedOfferings.length,
+                        (i) => FlatButton(
+//                              color: color.light,
+                              onPressed: () {},
+                              child: OfferingRow(color.med, offering),
+                            ),
+                      ),
+                    ),
+                  ],
+                ),
+              )
+            : Container(),
+        course.bulletinLink != null
+            ? FlatButton.icon(
+                padding: EdgeInsets.only(left: 15),
+                icon: Icon(
+                  Icons.open_in_browser,
+                  color: color.med,
+                ),
+                label: Text(
+                  'See More',
+                  style: TextStyle(color: color.med),
+                ),
+                onPressed: () => openCoursePage(),
+              )
+            : Container(),
+      ],
     );
   }
 }

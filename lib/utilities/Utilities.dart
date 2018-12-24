@@ -30,3 +30,9 @@ class CGColors {
   ];
 
 }
+
+class Helper {
+  static removeLastChar(String string) {
+    return string.replaceRange(string.length-1, string.length, '');
+  }
+}

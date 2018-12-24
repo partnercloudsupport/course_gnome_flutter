@@ -17,33 +17,36 @@ class LoginPage extends StatefulWidget {
 
 class _LoginPageState extends State<LoginPage> {
   _signInWithFB() async {
-    var facebookLogin = new FacebookLogin();
-    var result = await facebookLogin.logInWithReadPermissions(['email']);
-
-    switch (result.status) {
-      case FacebookLoginStatus.loggedIn:
-        await widget._auth
-            .signInWithFacebook(accessToken: result.accessToken.token);
-        _goToSearchPage();
+    _goToSearchPage();
+//    var facebookLogin = new FacebookLogin();
+//    var result = await facebookLogin.logInWithReadPermissions(['email']);
+//
+//    switch (result.status) {
+//      case FacebookLoginStatus.loggedIn:
+//        await widget._auth
+//            .signInWithFacebook(accessToken: result.accessToken.token);
+//        _goToSearchPage();
 //        _sendTokenToServer(result.accessToken.token);
 //        _showLoggedInUI();
-        break;
-      case FacebookLoginStatus.cancelledByUser:
+//        break;
+//      case FacebookLoginStatus.cancelledByUser:
 //        _showCancelledMessage();
-        break;
-      case FacebookLoginStatus.error:
+//        break;
+//      case FacebookLoginStatus.error:
+//        print(result.errorMessage);
 //        _showErrorOnUI(result.errorMessage);
-        break;
-    }
+//        break;
+//    }
   }
 
   _signInAnonymously() async {
-    await widget._auth.signInAnonymously();
+//    await widget._auth.signInAnonymously();
     _goToSearchPage();
   }
 
   _goToSearchPage() {
-    Navigator.pushReplacement(context, MaterialPageRoute(builder: (BuildContext context) => SearchPage()));
+    Navigator.pushReplacement(context,
+        MaterialPageRoute(builder: (BuildContext context) => SearchPage()));
   }
 
   @override
@@ -53,10 +56,7 @@ class _LoginPageState extends State<LoginPage> {
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [
-            Color(0xffED213A),
-            Color(0xff93291E)
-          ],
+          colors: [Color(0xffED213A), Color(0xff93291E)],
         ),
       ),
       child: SafeArea(
@@ -73,9 +73,7 @@ class _LoginPageState extends State<LoginPage> {
 //                    .copyWith(color: CGColors.cgred),
 //              ),
               Image.asset('assets/images/whiteLogo.png', height: 70),
-              Container(
-
-              ),
+              Container(),
               Container(
                 margin: EdgeInsets.only(top: 100),
                 height: 50,
@@ -90,7 +88,7 @@ class _LoginPageState extends State<LoginPage> {
                   label: Text(
                     "Log in with Facebook",
                     style: TextStyle(
-                            color: Colors.white,
+                        color: Colors.white,
                         fontWeight: FontWeight.bold,
                         fontSize: 15),
                   ),

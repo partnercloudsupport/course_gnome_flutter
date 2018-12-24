@@ -17,7 +17,7 @@ class MyApp extends StatelessWidget {
         primaryColor: CGColors.cgred,
         fontFamily: 'Lato',
       ),
-      home: LoginPage(),
+      home: SearchPage(),
       debugShowCheckedModeBanner: false,
     );
   }
