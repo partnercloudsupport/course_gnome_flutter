@@ -13,11 +13,12 @@ class Calendars {
 
   int currentCalendarIndex;
   List<Calendar> list;
-  Calendar currentCalendar() {
-    return list[currentCalendarIndex];
-  }
 
-  Calendars();
+  Calendar currentCalendar() => list[currentCalendarIndex];
+
+  Calendars() {
+    list = [];
+  }
 
   Calendars.fromJson(Map<String, dynamic> json) {
     currentCalendarIndex = json['currentCalendarIndex'];
@@ -38,7 +39,6 @@ class Calendars {
     final jsonString = sp.getString("calendars");
     if (jsonString == null) {
       print('No saved cals, create initial one');
-      list = [];
       this.addCalendar(initialCalName);
       return;
     }
@@ -46,7 +46,6 @@ class Calendars {
     final Map<String, dynamic> json = jsonDecode(jsonString);
     currentCalendarIndex = json['currentCalendarIndex'];
     final List<dynamic> calendars = json['list'];
-    list = [];
     calendars
         .forEach((cal) => list.add(Calendar.fromJson(cal, _calendarsUpdated)));
   }
@@ -145,6 +144,7 @@ class ClassBlock {
   double offset, height;
   String departmentInfo, id, name;
   CGColor color;
+
   ClassBlock(this.offset, this.height, this.departmentInfo, this.id, this.name,
       this.color);
 
@@ -152,9 +152,9 @@ class ClassBlock {
     offset = json['offset'];
     height = json['height'];
     departmentInfo = json['departmentInfo'];
-    id = json['name'];
+    id = json['id'];
     name = json['name'];
-    color = CGColor(json["color-light"],json["color-med"],json["color-dark"]);
+    color = CGColor(json["color-light"], json["color-med"], json["color-dark"]);
   }
 
   Map<String, dynamic> toJson() => {

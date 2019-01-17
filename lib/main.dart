@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 
 import 'package:course_gnome/ui/SearchPage.dart';
 import 'ui/LoginPage.dart';
+import 'ui/SchedulingPage.dart';
 import 'utilities/Utilities.dart';
-
 
 void main() => runApp(MyApp());
 
@@ -17,7 +17,7 @@ class MyApp extends StatelessWidget {
         primaryColor: CGColors.cgred,
         fontFamily: 'Lato',
       ),
-      home: SearchPage(),
+      home: SchedulingPage(),
       debugShowCheckedModeBanner: false,
     );
   }

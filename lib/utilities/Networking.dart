@@ -8,13 +8,16 @@ import 'package:course_gnome/utilities/dummyData.json';
 
 class SearchObject {
   String name;
+
   SearchObject({this.name});
 }
 
 class CourseResults {
   int total;
   List<Course> results;
+
   CourseResults({this.total, this.results});
+
   clear() {
     total = 0;
     results.clear();

@@ -11,6 +11,7 @@ import 'package:course_gnome/ui/SearchPage.dart';
 
 class LoginPage extends StatefulWidget {
   final FirebaseAuth _auth = FirebaseAuth.instance;
+
   @override
   _LoginPageState createState() => _LoginPageState();
 }
@@ -45,8 +46,8 @@ class _LoginPageState extends State<LoginPage> {
   }
 
   _goToSearchPage() {
-    Navigator.pushReplacement(context,
-        MaterialPageRoute(builder: (BuildContext context) => SearchPage()));
+//    Navigator.pushReplacement(context,
+//        MaterialPageRoute(builder: (BuildContext context) => SearchPage()));
   }
 
   @override

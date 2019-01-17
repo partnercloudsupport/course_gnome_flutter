@@ -5,14 +5,30 @@ import 'package:url_launcher/url_launcher.dart';
 
 import 'package:course_gnome/ui/CalendarPage.dart';
 import 'package:course_gnome/ui/ProfilePage.dart';
+import 'package:course_gnome/ui/custom/CGExpansionTile.dart';
 
-import 'package:course_gnome/model/Course.dart';
 import 'package:course_gnome/model/Calendar.dart';
+import 'package:course_gnome/model/Course.dart';
 
 import 'package:course_gnome/utilities/Utilities.dart';
 import 'package:course_gnome/utilities/Networking.dart';
 
 class SearchPage extends StatefulWidget {
+  final Calendars _calendars;
+  final Function _toggleOffering;
+  final bool _inSplitView;
+  final VoidCallback _toggleActivePage;
+  Key _key;
+
+  SearchPage(
+    this._calendars,
+    this._toggleOffering,
+    this._inSplitView,
+    this._toggleActivePage,
+  ) {
+    this._key = PageStorageKey("search");
+  }
+
   @override
   _SearchPageState createState() => _SearchPageState();
 }
@@ -25,20 +41,11 @@ class _SearchPageState extends State<SearchPage> {
   var _showingSearchResults = false;
 
   var _offset = 0;
+
   // search object
   var _oldSearchObject = SearchObject();
   var _searchObject = SearchObject();
   var _courseResults = CourseResults(total: 0, results: []);
-
-  // cal
-  var _calendars = Calendars();
-
-  _toggleOffering(Course course, Offering offering, CGColor color) {
-    setState(() {
-      _calendars.list[_calendars.currentCalendarIndex]
-          .toggleOffering(course, offering, color);
-    });
-  }
 
   _offeringExpanded(Offering offering) {
     _expandedOffering = offering;
@@ -111,12 +118,12 @@ class _SearchPageState extends State<SearchPage> {
   }
 
   _goToCalendar() {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => CalendarPage(_calendars),
-      ),
-    );
+//    Navigator.push(
+//      context,
+//      MaterialPageRoute(
+//        builder: (context) => CalendarPage(widget._calendars),
+//      ),
+//    );
   }
 
   // TODO
@@ -124,10 +131,8 @@ class _SearchPageState extends State<SearchPage> {
 
   @override
   void initState() {
-    // TODO: implement initState
     super.initState();
-    _calendars = Calendars();
-    _calendars.init();
+    print('d');
   }
 
   @override
@@ -152,11 +157,13 @@ class _SearchPageState extends State<SearchPage> {
 //            icon: Icon(Icons.filter_list),
 //            onPressed: _goToFilter,
 //          ),
-          IconButton(
-            padding: EdgeInsets.only(right: 15.0),
-            icon: Icon(Icons.calendar_today),
-            onPressed: _goToCalendar,
-          ),
+          !widget._inSplitView
+              ? IconButton(
+                  padding: EdgeInsets.only(right: 15.0),
+                  icon: Icon(Icons.calendar_today),
+                  onPressed: widget._toggleActivePage,
+                )
+              : null,
         ],
       ),
       body: SafeArea(
@@ -205,9 +212,9 @@ class _SearchPageState extends State<SearchPage> {
                 (BuildContext context, int i) {
                   return CourseCard(
                     offeringExpanded: _offeringExpanded,
-                    currentCalendar:
-                        _calendars.list[_calendars.currentCalendarIndex],
-                    toggleOffering: _toggleOffering,
+                    currentCalendar: widget._calendars
+                        .list[widget._calendars.currentCalendarIndex],
+                    toggleOffering: widget._toggleOffering,
                     expandedOffering: _expandedOffering,
                     course: _courseResults.results[i],
                     borderRadius: _borderRadius,
@@ -277,6 +284,7 @@ class CourseCard extends StatelessWidget {
   final Course course;
   final double borderRadius;
   final CGColor color;
+
   CourseCard(
       {this.toggleOffering,
       this.offeringExpanded,
@@ -285,6 +293,7 @@ class CourseCard extends StatelessWidget {
       this.course,
       this.borderRadius,
       this.color});
+
   @override
   Widget build(BuildContext context) {
     return SafeArea(
@@ -345,18 +354,20 @@ class CourseCard extends StatelessWidget {
                 (j) => Container(
                       color:
                           currentCalendar.ids.contains(course.offerings[j].crn)
-                              ? color.light
+                              ? color.med.withOpacity(0.1)
                               : Colors.transparent,
-                      child: ExpansionTile(
+                      child: CGExpansionTile(
+                        key: PageStorageKey<Offering>(course.offerings[j]),
+                        color: color.med,
+                        onLongPress: () {
+                          HapticFeedback.selectionClick();
+                          toggleOffering(course, course.offerings[j], color);
+                        },
                         onExpansionChanged:
                             offeringExpanded(course.offerings[j]),
                         initiallyExpanded:
                             expandedOffering == course.offerings[j],
                         title: GestureDetector(
-                          onLongPress: () {
-                            HapticFeedback.selectionClick();
-                            toggleOffering(course, course.offerings[j], color);
-                          },
                           child: OfferingRow(color.med, course.offerings[j]),
                         ),
                         children: [
@@ -373,16 +384,12 @@ class CourseCard extends StatelessWidget {
   }
 }
 
-class Breakpoints {
-  static int sm = 400;
-  static int md = 600;
-  static int lg = 800;
-}
-
 class OfferingRow extends StatelessWidget {
   final Color color;
   final Offering offering;
+
   OfferingRow(this.color, this.offering);
+
   @override
   Widget build(BuildContext context) {
     final width = MediaQuery.of(context).size.width;
@@ -400,11 +407,14 @@ class OfferingRow extends StatelessWidget {
         ),
         width > Breakpoints.sm && offering.instructors != null
             ? Expanded(
-                flex: 3,
-                child: Text(
-                  offering.instructors,
-                  style: TextStyle(color: color),
-                  overflow: TextOverflow.ellipsis,
+                flex: 7,
+                child: Padding(
+                  padding: EdgeInsets.only(right: 20),
+                  child: Text(
+                    offering.instructors,
+                    style: TextStyle(color: color),
+                    overflow: TextOverflow.ellipsis,
+                  ),
                 ),
               )
             : Container(),
@@ -451,7 +461,9 @@ class CGChip extends StatelessWidget {
 class ClassTimeRow extends StatelessWidget {
   final ClassTime classTime;
   final Color color;
+
   ClassTimeRow(this.classTime, this.color);
+
   @override
   Widget build(BuildContext context) {
     return Row(
@@ -489,6 +501,7 @@ class ExtraInfoContainer extends StatelessWidget {
   final CGColor color;
   final Offering offering;
   final Course course;
+
   ExtraInfoContainer(this.color, this.offering, this.course);
 
   openCoursePage() async {
@@ -499,7 +512,6 @@ class ExtraInfoContainer extends StatelessWidget {
       throw 'Could not launch $url';
     }
   }
-//      padding: EdgeInsets.fromLTRB(15, 0, 15, 10),
 
   @override
   Widget build(BuildContext context) {
@@ -507,8 +519,8 @@ class ExtraInfoContainer extends StatelessWidget {
     String locationString =
         offering.classTimes.length > 1 ? 'Locations: ' : 'Location: ';
     offering.classTimes
-        .forEach((time) => locationString += time.location + ',');
-    locationString = Helper.removeLastChar(locationString);
+        .forEach((time) => locationString += time.location + ', ');
+    locationString = Helper.removeLastChars(2, locationString);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
