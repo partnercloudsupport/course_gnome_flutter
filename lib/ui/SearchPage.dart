@@ -129,11 +129,10 @@ class _SearchPageState extends State<SearchPage> {
   // TODO
   _goToFilter() {}
 
-  @override
-  void initState() {
-    super.initState();
-    print('d');
-  }
+//  @override
+//  void initState() {
+//    super.initState();
+//  }
 
   @override
   Widget build(BuildContext context) {
@@ -157,13 +156,58 @@ class _SearchPageState extends State<SearchPage> {
 //            icon: Icon(Icons.filter_list),
 //            onPressed: _goToFilter,
 //          ),
-          !widget._inSplitView
-              ? IconButton(
-                  padding: EdgeInsets.only(right: 15.0),
-                  icon: Icon(Icons.calendar_today),
-                  onPressed: widget._toggleActivePage,
-                )
-              : null,
+          Stack(
+            children: <Widget>[
+              FloatingActionButton(
+                backgroundColor: Colors.transparent,
+                highlightElevation: 0,
+                elevation: 0,
+                onPressed: widget._toggleActivePage,
+                child: Stack(
+                  children: [
+                    IconButton(
+                      icon: Icon(Icons.calendar_today),
+                      disabledColor: Colors.white,
+                      onPressed: null,
+                    ),
+                    Stack(
+                      children: <Widget>[
+                        Container(
+                          decoration:
+                              widget._calendars.currentCalendar().ids.length > 0
+                                  ? BoxDecoration(
+                                      shape: BoxShape.circle,
+                                      color: Colors.white,
+                                      border: Border.all(
+                                          color: CGColors.cgred, width: 4))
+                                  : null,
+                          width: 28,
+                          height: 28,
+                        ),
+                        Positioned(
+                          top: 5,
+                          left: 9,
+                          child:
+                              widget._calendars.currentCalendar().ids.length > 0
+                                  ? Text(
+                                      widget._calendars
+                                          .currentCalendar()
+                                          .ids
+                                          .length
+                                          .toString(),
+                                      style: TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                          color: CGColors.cgred),
+                                    )
+                                  : Container(),
+                        )
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
         ],
       ),
       body: SafeArea(

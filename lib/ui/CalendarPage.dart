@@ -123,7 +123,7 @@ class _CalendarPageState extends State<CalendarPage> {
                   });
                 },
               )
-            : null,
+            : Container(),
       ),
     );
   }
@@ -201,7 +201,7 @@ class _CalendarPageState extends State<CalendarPage> {
             ? IconButton(
                 icon: Icon(Icons.arrow_back_ios),
                 onPressed: widget._toggleActivePage)
-            : null,
+            : Container(),
         actions: [
           IconButton(
               icon: Icon(Icons.playlist_add),

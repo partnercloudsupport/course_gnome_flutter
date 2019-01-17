@@ -1,10 +1,8 @@
 import 'package:flutter/material.dart';
-import 'dart:convert';
 
 import 'package:cloud_functions/cloud_functions.dart';
 
 import 'package:course_gnome/model/Course.dart';
-import 'package:course_gnome/utilities/dummyData.json';
 
 class SearchObject {
   String name;
