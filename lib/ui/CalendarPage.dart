@@ -15,7 +15,6 @@ class CalendarPage extends StatefulWidget {
       _editCalendar,
       _deleteCalendar,
       _toggleActivePage;
-  Key _key;
 
   CalendarPage(
     this._calendars,
@@ -26,10 +25,9 @@ class CalendarPage extends StatefulWidget {
     this._deleteCalendar,
     this._removeOffering,
     this._inSplitView,
-    this._toggleActivePage,
-  ) {
-    this._key = PageStorageKey("calendar");
-  }
+    this._toggleActivePage, {
+    Key key,
+  }) : super(key: key);
 
   @override
   _CalendarPageState createState() => _CalendarPageState();

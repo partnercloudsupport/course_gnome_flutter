@@ -6,8 +6,9 @@ import 'package:course_gnome/model/Course.dart';
 
 class SearchObject {
   String name;
+  String departmentAcronym;
 
-  SearchObject({this.name});
+  SearchObject({this.name, this.departmentAcronym});
 }
 
 class CourseResults {

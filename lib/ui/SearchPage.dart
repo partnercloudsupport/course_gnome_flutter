@@ -14,20 +14,26 @@ import 'package:course_gnome/utilities/Utilities.dart';
 import 'package:course_gnome/utilities/Networking.dart';
 
 class SearchPage extends StatefulWidget {
-  final Calendars _calendars;
-  final Function _toggleOffering;
-  final bool _inSplitView;
-  final VoidCallback _toggleActivePage;
-  Key _key;
+  final Calendars calendars;
+  final Function toggleOffering;
+  final bool inSplitView;
+  final VoidCallback toggleActivePage, clearResults;
+  final Function loadMoreResults, search;
+  final SearchObject searchObject;
+  final CourseResults courseResults;
+  final int offset;
 
   SearchPage(
-    this._calendars,
-    this._toggleOffering,
-    this._inSplitView,
-    this._toggleActivePage,
-  ) {
-    this._key = PageStorageKey("search");
-  }
+      {this.calendars,
+      this.toggleOffering,
+      this.inSplitView,
+      this.toggleActivePage,
+      this.loadMoreResults,
+      this.clearResults,
+      this.search,
+      this.searchObject,
+      this.courseResults,
+      this.offset});
 
   @override
   _SearchPageState createState() => _SearchPageState();
@@ -35,34 +41,16 @@ class SearchPage extends StatefulWidget {
 
 class _SearchPageState extends State<SearchPage> {
   static const _borderRadius = 3.0;
-  Offering _expandedOffering;
   final _searchTextFieldController = TextEditingController();
   var _searching = false;
   var _showingSearchResults = false;
 
-  var _offset = 0;
-
-  // search object
-  var _oldSearchObject = SearchObject();
-  var _searchObject = SearchObject();
-  var _courseResults = CourseResults(total: 0, results: []);
-
-  _offeringExpanded(Offering offering) {
-    _expandedOffering = offering;
-  }
-
   _search(String name) async {
-    if (name.isEmpty) {
-      _clearSearch();
-      return;
-    }
     setState(() {
       _showingSearchResults = false;
-      _offset = 0;
-      _searchObject.name = name;
       _searching = true;
     });
-    _courseResults = await Networking.getCourses(_searchObject, _offset);
+    await widget.search();
     setState(() {
       _searching = false;
     });
@@ -71,27 +59,16 @@ class _SearchPageState extends State<SearchPage> {
   _loadMoreResults() async {
     setState(() {
       _searching = true;
-      _offset += 10;
     });
-    try {
-      final _moreResults = await Networking.getCourses(_searchObject, _offset);
-      setState(() {
-        _searching = false;
-        _courseResults.results.addAll(_moreResults.results);
-      });
-    } catch (err) {
-      setState(() {
-        _searching = false;
-        _offset -= 10;
-      });
-    }
+    await widget.loadMoreResults();
+    setState(() {
+      _searching = false;
+    });
   }
 
   _clearSearch() {
     _searchTextFieldController.clear();
-    setState(() {
-      _courseResults.clear();
-    });
+    widget.clearResults();
   }
 
   _onSearchFieldTap() {
@@ -107,28 +84,6 @@ class _SearchPageState extends State<SearchPage> {
     FocusScope.of(context).requestFocus(new FocusNode());
   }
 
-  // TODO
-  _goToProfile() {
-//    Navigator.replace(
-//      context,
-//      MaterialPageRoute(
-//        builder: (context) => ProfilePage(),
-//      ),
-//    );
-  }
-
-  _goToCalendar() {
-//    Navigator.push(
-//      context,
-//      MaterialPageRoute(
-//        builder: (context) => CalendarPage(widget._calendars),
-//      ),
-//    );
-  }
-
-  // TODO
-  _goToFilter() {}
-
 //  @override
 //  void initState() {
 //    super.initState();
@@ -137,206 +92,301 @@ class _SearchPageState extends State<SearchPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        elevation: 0,
-        title: Text('Search'),
-        centerTitle: false,
-        leading: _showingSearchResults
-            ? IconButton(
-                icon: Icon(Icons.arrow_back_ios),
-                onPressed: _dismissSearch,
-              )
-            : IconButton(
-                icon: Icon(Icons.person),
-                onPressed: _goToProfile,
-              ),
-        actions: [
-          //TODO
-//          IconButton(
-//            icon: Icon(Icons.filter_list),
-//            onPressed: _goToFilter,
-//          ),
-          Stack(
+        appBar: AppBar(
+          elevation: 0,
+          title: Text('Search'),
+          centerTitle: false,
+          leading: _showingSearchResults
+              ? IconButton(
+                  icon: Icon(Icons.arrow_back_ios),
+                  onPressed: _dismissSearch,
+                )
+              : IconButton(icon: Icon(Icons.person), onPressed: () {}
+                  //TODO
+                  ),
+          actions: [
+            //TODO
+            IconButton(
+              icon: Icon(Icons.filter_list),
+              onPressed: () {},
+            ),
+            !widget.inSplitView
+                ? CalendarCounter(widget.calendars, widget.toggleActivePage)
+                : Container(),
+          ],
+        ),
+        body: Container(
+          padding: const EdgeInsets.all(10),
+          color: CGColors.cgred,
+          child: Column(
+//            mainAxisSize: MainAxisSize.min,
             children: <Widget>[
-              FloatingActionButton(
-                backgroundColor: Colors.transparent,
-                highlightElevation: 0,
-                elevation: 0,
-                onPressed: widget._toggleActivePage,
-                child: Stack(
-                  children: [
-                    IconButton(
-                      icon: Icon(Icons.calendar_today),
-                      disabledColor: Colors.white,
-                      onPressed: null,
+              Expanded(
+                child: ListView(
+                  shrinkWrap: true,
+                  children: <Widget>[
+                    Padding(
+                      padding: const EdgeInsets.only(left: 4),
+                      child: Text(
+                        'Department',
+                        style: TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 20),
+                      ),
                     ),
-                    Stack(
-                      children: <Widget>[
-                        Container(
-                          decoration:
-                              widget._calendars.currentCalendar().ids.length > 0
-                                  ? BoxDecoration(
-                                      shape: BoxShape.circle,
-                                      color: Colors.white,
-                                      border: Border.all(
-                                          color: CGColors.cgred, width: 4))
-                                  : null,
-                          width: 28,
-                          height: 28,
+                    Padding(
+                      padding: const EdgeInsets.only(
+                        top: 10.0,
+                        left: 1.0,
+                      ),
+                      child: Wrap(
+                        spacing: 5,
+                        runSpacing: 10,
+                        children: List.generate(
+                          Departments.departments.length,
+                          (i) => GestureDetector(
+                                onTap: (){
+                                  setState(() {
+
+                                  });
+                                },
+                                child: Container(
+                                  padding: EdgeInsets.all(6),
+                                  decoration: BoxDecoration(
+                                    border: Border.all(color: Colors.white),
+                                    borderRadius:
+                                        BorderRadius.all(Radius.circular(30)),
+                                    color: widget.searchObject.departmentAcronym == Departments.departments[i]['acronym']
+                                        ? Colors.green
+                                        : Colors.transparent,
+                                  ),
+                                  child: Text(
+                                    Departments.departments[i]['name'],
+                                    style: TextStyle(color: Colors.white),
+                                  ),
+                                ),
+                              ),
                         ),
-                        Positioned(
-                          top: 5,
-                          left: 9,
-                          child:
-                              widget._calendars.currentCalendar().ids.length > 0
-                                  ? Text(
-                                      widget._calendars
-                                          .currentCalendar()
-                                          .ids
-                                          .length
-                                          .toString(),
-                                      style: TextStyle(
-                                          fontWeight: FontWeight.bold,
-                                          color: CGColors.cgred),
-                                    )
-                                  : Container(),
-                        )
-                      ],
+                      ),
                     ),
                   ],
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.only(top: 8.0),
+                child: RaisedButton(
+                  color: Colors.orange,
+                  child: Text('Done'),
+                  onPressed: () {},
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(30.0),
+                  ),
                 ),
               ),
             ],
           ),
-        ],
-      ),
-      body: SafeArea(
-        top: false,
-        left: false,
-        right: false,
-        child: CustomScrollView(
-          slivers: <Widget>[
-            SliverAppBar(
-              title: SafeArea(
-                child: Container(
-                  margin: EdgeInsets.only(bottom: 10),
-                  child: TextField(
-                    onTap: _onSearchFieldTap,
-                    controller: _searchTextFieldController,
-                    onSubmitted: (text) => _search(text),
-                    decoration: InputDecoration(
-                      border: InputBorder.none,
-                      hintText: 'Search for anything',
-                      prefixIcon: Icon(Icons.search),
-                      suffixIcon: _searchTextFieldController.text.isNotEmpty
-                          ? IconButton(
-                              icon: Icon(
-                                Icons.clear,
-                                color: Colors.grey,
-                              ),
-                              onPressed: () => _clearSearch(),
-                            )
-                          : null,
+        )
+//      body: SafeArea(
+//        top: false,
+//        left: false,
+//        right: false,
+//        child: CustomScrollView(
+//          slivers: <Widget>[
+//            SliverAppBar(
+//              title: _searchField(),
+//              floating: true,
+//              snap: true,
+//            ),
+//            SliverList(
+//              delegate: SliverChildBuilderDelegate(
+//                (BuildContext context, int i) {
+//                  return CourseCard(
+//                    currentCalendar: widget
+//                        .calendars.list[widget.calendars.currentCalendarIndex],
+//                    toggleOffering: widget.toggleOffering,
+//                    course: widget.courseResults.results[i],
+//                    borderRadius: _borderRadius,
+//                    color: CGColors.array[i % CGColors.array.length],
+//                  );
+//                },
+//                addAutomaticKeepAlives: true,
+//                childCount: widget.courseResults.results.length,
+//              ),
+//            ),
+//            SliverPadding(
+//              padding: EdgeInsets.only(top: 30),
+//              sliver: SliverList(
+//                delegate: SliverChildListDelegate(
+//                  [
+//                    Column(
+//                      children: [
+//                        !_searching
+//                            ? widget.courseResults.total > widget.offset + 10
+//                                ? _loadMoreButton()
+//                                : Container()
+//                            : _progressIndicator()
+//                      ],
+//                    )
+//                  ],
+//                ),
+//              ),
+//            ),
+//          ],
+//        ),
+//      ),
+        );
+  }
+
+  SafeArea _searchField() {
+    return SafeArea(
+      child: Container(
+        margin: EdgeInsets.only(bottom: 10),
+        child: TextField(
+          onTap: _onSearchFieldTap,
+          controller: _searchTextFieldController,
+          onSubmitted: (text) => _search(text),
+          decoration: InputDecoration(
+            border: InputBorder.none,
+            hintText: 'Search for anything',
+            prefixIcon: Icon(Icons.search),
+            suffixIcon: _searchTextFieldController.text.isNotEmpty
+                ? IconButton(
+                    icon: Icon(
+                      Icons.clear,
+                      color: Colors.grey,
                     ),
-                    textCapitalization: TextCapitalization.sentences,
-                    textInputAction: TextInputAction.search,
-                  ),
-                  decoration: BoxDecoration(
-                    borderRadius: const BorderRadius.all(
-                        const Radius.circular(_borderRadius)),
-                    color: Colors.white,
-                  ),
-                ),
-              ),
-              floating: true,
-              snap: true,
+                    onPressed: () => _clearSearch(),
+                  )
+                : null,
+          ),
+          textCapitalization: TextCapitalization.sentences,
+          textInputAction: TextInputAction.search,
+          enabled: false,
+        ),
+        decoration: BoxDecoration(
+          borderRadius:
+              const BorderRadius.all(const Radius.circular(_borderRadius)),
+          color: Colors.white,
+        ),
+      ),
+    );
+  }
+
+  RaisedButton _loadMoreButton() {
+    return RaisedButton.icon(
+      icon: Icon(
+        Icons.expand_more,
+        color: Colors.white,
+      ),
+      color: CGColors.cgred,
+      label: Text(
+        'Load More',
+        style: TextStyle(
+            color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
+      ),
+      onPressed: _loadMoreResults,
+    );
+  }
+
+  Container _progressIndicator() {
+    return Container(
+      width: 60,
+      child: AspectRatio(
+        aspectRatio: 1.0,
+        child: Padding(
+          padding: EdgeInsets.all(12.0),
+          child: CircularProgressIndicator(
+            valueColor: AlwaysStoppedAnimation(
+              CGColors.cgred,
             ),
-            SliverList(
-              delegate: SliverChildBuilderDelegate(
-                (BuildContext context, int i) {
-                  return CourseCard(
-                    offeringExpanded: _offeringExpanded,
-                    currentCalendar: widget._calendars
-                        .list[widget._calendars.currentCalendarIndex],
-                    toggleOffering: widget._toggleOffering,
-                    expandedOffering: _expandedOffering,
-                    course: _courseResults.results[i],
-                    borderRadius: _borderRadius,
-                    color: CGColors.array[i % CGColors.array.length],
-                  );
-                },
-                addAutomaticKeepAlives: true,
-                childCount: _courseResults.results.length,
-              ),
-            ),
-            SliverPadding(
-              padding: EdgeInsets.only(top: 30),
-              sliver: SliverList(
-                delegate: SliverChildListDelegate(
-                  [
-                    Column(
-                      children: [
-                        !_searching
-                            ? _courseResults.total > _offset + 10
-                                ? RaisedButton.icon(
-                                    icon: Icon(
-                                      Icons.expand_more,
-                                      color: Colors.white,
-                                    ),
-                                    color: CGColors.cgred,
-                                    label: Text(
-                                      'Load More',
-                                      style: TextStyle(
-                                          color: Colors.white,
-                                          fontWeight: FontWeight.bold,
-                                          fontSize: 16),
-                                    ),
-                                    onPressed: _loadMoreResults,
-                                  )
-                                : Container()
-                            : Container(
-                                width: 60,
-                                child: AspectRatio(
-                                  aspectRatio: 1.0,
-                                  child: Padding(
-                                    padding: EdgeInsets.all(12.0),
-                                    child: CircularProgressIndicator(
-                                      valueColor: AlwaysStoppedAnimation(
-                                        CGColors.cgred,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ),
-                      ],
-                    )
-                  ],
-                ),
-              ),
-            ),
-          ],
+          ),
         ),
       ),
     );
   }
 }
 
+class CalendarCounter extends StatefulWidget {
+  final Calendars _calendars;
+  final VoidCallback _toggleActivePage;
+
+  CalendarCounter(this._calendars, this._toggleActivePage);
+
+  @override
+  _CalendarCounterState createState() => _CalendarCounterState();
+}
+
+class _CalendarCounterState extends State<CalendarCounter> {
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      children: <Widget>[
+        FloatingActionButton(
+          backgroundColor: Colors.transparent,
+          highlightElevation: 0,
+          elevation: 0,
+          onPressed: widget._toggleActivePage,
+          child: Stack(
+            children: [
+              IconButton(
+                icon: Icon(Icons.calendar_today),
+                disabledColor: Colors.white,
+                onPressed: null,
+              ),
+              Stack(
+                children: <Widget>[
+                  Container(
+                    decoration: widget._calendars.currentCalendar().ids.length >
+                            0
+                        ? BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: Colors.white,
+                            border: Border.all(color: CGColors.cgred, width: 4))
+                        : null,
+                    width: 28,
+                    height: 28,
+                  ),
+                  Positioned(
+                    top: 5,
+                    left: 9,
+                    child: widget._calendars.currentCalendar().ids.length > 0
+                        ? Text(
+                            widget._calendars
+                                .currentCalendar()
+                                .ids
+                                .length
+                                .toString(),
+                            style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                color: CGColors.cgred),
+                          )
+                        : Container(),
+                  )
+                ],
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
 class CourseCard extends StatelessWidget {
-  final Function offeringExpanded, toggleOffering;
-  final Offering expandedOffering;
+  final Function toggleOffering;
   final Calendar currentCalendar;
   final Course course;
   final double borderRadius;
   final CGColor color;
 
-  CourseCard(
-      {this.toggleOffering,
-      this.offeringExpanded,
-      this.currentCalendar,
-      this.expandedOffering,
-      this.course,
-      this.borderRadius,
-      this.color});
+  CourseCard({
+    this.toggleOffering,
+    this.currentCalendar,
+    this.course,
+    this.borderRadius,
+    this.color,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -401,16 +451,12 @@ class CourseCard extends StatelessWidget {
                               ? color.med.withOpacity(0.1)
                               : Colors.transparent,
                       child: CGExpansionTile(
-                        key: PageStorageKey<Offering>(course.offerings[j]),
+                        key: PageStorageKey<String>(course.offerings[j].crn),
                         color: color.med,
                         onLongPress: () {
                           HapticFeedback.selectionClick();
                           toggleOffering(course, course.offerings[j], color);
                         },
-                        onExpansionChanged:
-                            offeringExpanded(course.offerings[j]),
-                        initiallyExpanded:
-                            expandedOffering == course.offerings[j],
                         title: GestureDetector(
                           child: OfferingRow(color.med, course.offerings[j]),
                         ),
@@ -436,6 +482,8 @@ class OfferingRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+//    print(context.size.width);
+//    print(MediaQuery.of(context).size.width);
     final width = MediaQuery.of(context).size.width;
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -510,8 +558,18 @@ class ClassTimeRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final width = MediaQuery.of(context).size.width;
     return Row(
       children: <Widget>[
+        width > Breakpoints.md && classTime.location != null
+            ? Padding(
+                padding: const EdgeInsets.only(right: 10.0),
+                child: Text(
+                  classTime.location,
+                  style: TextStyle(color: color),
+                ),
+              )
+            : Container(),
         Row(
           children: List.generate(
             5,

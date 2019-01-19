@@ -7,6 +7,7 @@ import 'package:course_gnome/model/Calendar.dart';
 import 'package:course_gnome/model/Course.dart';
 
 import 'package:course_gnome/utilities/Utilities.dart';
+import 'package:course_gnome/utilities/Networking.dart';
 
 //enum ActivePage { Search, Calendar }
 
@@ -21,7 +22,7 @@ class _SchedulingPageState extends State<SchedulingPage>
   var _calendars = Calendars();
   var _ready = false;
   bool _inSplitView;
-  PageController _pageController = PageController();
+  PageController _pageController = PageController(keepPage: true);
   TabController _tabController;
   TextEditingController _calendarNameController = TextEditingController();
 
@@ -63,11 +64,53 @@ class _SchedulingPageState extends State<SchedulingPage>
     FocusScope.of(context).requestFocus(new FocusNode());
   }
 
-  // Offering Page logic
+  // Search Page logic
   _toggleOffering(Course course, Offering offering, CGColor color) {
     setState(() {
       _calendars.list[_calendars.currentCalendarIndex]
           .toggleOffering(course, offering, color);
+    });
+  }
+
+  var _offset = 0;
+
+  // search object
+  var _oldSearchObject = SearchObject();
+  var _searchObject = SearchObject();
+  var _courseResults = CourseResults(total: 0, results: []);
+
+  _search(String name) async {
+    if (name.isEmpty) {
+      return;
+    }
+    setState(() {
+      _offset = 0;
+      _searchObject.name = name;
+    });
+    _courseResults = await Networking.getCourses(_searchObject, _offset);
+    return;
+  }
+
+  _loadMoreResults() async {
+    setState(() {
+      _offset += 10;
+    });
+    try {
+      final _moreResults = await Networking.getCourses(_searchObject, _offset);
+      setState(() {
+        _courseResults.results.addAll(_moreResults.results);
+      });
+    } catch (err) {
+      setState(() {
+        _offset -= 10;
+      });
+    }
+    return;
+  }
+
+  _clearResults() {
+    setState(() {
+      _courseResults.clear();
     });
   }
 
@@ -131,10 +174,16 @@ class _SchedulingPageState extends State<SchedulingPage>
     // wait until calendars init
     _inSplitView = MediaQuery.of(context).size.width > Breakpoints.lg;
     final search = SearchPage(
-      _calendars,
-      _toggleOffering,
-      _inSplitView,
-      _toggleActivePage,
+      calendars: _calendars,
+      clearResults: _clearResults,
+      courseResults: _courseResults,
+      inSplitView: _inSplitView,
+      loadMoreResults: _loadMoreResults,
+      search: _search,
+      searchObject: _searchObject,
+      toggleActivePage: _toggleActivePage,
+      toggleOffering: _toggleOffering,
+      offset: _offset,
     );
     final calendar = CalendarPage(
       _calendars,

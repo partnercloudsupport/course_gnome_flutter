@@ -9,14 +9,15 @@ class Course {
       bulletinLink;
   List<Offering> offerings;
 
-  Course(
-      {this.departmentAcronym,
-      this.departmentNumber,
-      this.name,
-      this.credit,
-      this.description,
-      this.bulletinLink,
-      this.offerings});
+  Course({
+    this.departmentAcronym,
+    this.departmentNumber,
+    this.name,
+    this.credit,
+    this.description,
+    this.bulletinLink,
+    this.offerings,
+  });
 }
 
 class Offering {
@@ -24,13 +25,14 @@ class Offering {
   List<ClassTime> classTimes;
   List<Offering> linkedOfferings;
 
-  Offering(
-      {this.sectionNumber,
-      this.status,
-      this.crn,
-      this.classTimes,
-      this.instructors,
-      this.linkedOfferings});
+  Offering({
+    this.sectionNumber,
+    this.status,
+    this.crn,
+    this.classTimes,
+    this.instructors,
+    this.linkedOfferings,
+  });
 }
 
 class ClassTime {
@@ -38,7 +40,12 @@ class ClassTime {
   String location;
   List<bool> days;
 
-  ClassTime({this.startTime, this.endTime, this.location, this.days});
+  ClassTime({
+    this.startTime,
+    this.endTime,
+    this.location,
+    this.days,
+  });
 
   String timeToString(TimeOfDay time) {
     var minuteString = time.minute.toString();
